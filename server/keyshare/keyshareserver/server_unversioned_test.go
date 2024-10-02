@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/BeardOfDoom/pq-gabi/signed"
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/internal/test"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/privacybydesign/gabi/signed"
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/internal/test"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )

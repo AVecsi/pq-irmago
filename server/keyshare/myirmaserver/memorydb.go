@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/privacybydesign/irmago/server/keyshare"
+	"github.com/BeardOfDoom/pq-irmago/server/keyshare"
 )
 
 type memoryUserData struct {

@@ -5,10 +5,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/server"
+	"github.com/BeardOfDoom/pq-irmago/server/requestorserver"
 	"github.com/go-errors/errors"
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/server"
-	"github.com/privacybydesign/irmago/server/requestorserver"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

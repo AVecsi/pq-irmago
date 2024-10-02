@@ -6,12 +6,12 @@ package keyshareserver
 import (
 	"context"
 	"fmt"
-	"github.com/privacybydesign/irmago/server"
+	"github.com/BeardOfDoom/pq-irmago/server"
 	"math"
 	"testing"
 	"time"
 
-	"github.com/privacybydesign/irmago/internal/test"
+	"github.com/BeardOfDoom/pq-irmago/internal/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

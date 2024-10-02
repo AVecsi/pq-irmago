@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/BeardOfDoom/pq-gabi/big"
+	"github.com/BeardOfDoom/pq-gabi/signed"
+	"github.com/BeardOfDoom/pq-irmago/internal/test"
 	"github.com/go-errors/errors"
-	"github.com/privacybydesign/gabi/big"
-	"github.com/privacybydesign/gabi/signed"
-	"github.com/privacybydesign/irmago/internal/test"
 	"github.com/stretchr/testify/require"
 )
 

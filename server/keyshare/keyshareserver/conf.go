@@ -9,14 +9,14 @@ import (
 	"strings"
 	"time"
 
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/internal/common"
-	"github.com/privacybydesign/irmago/internal/keysharecore"
-	"github.com/privacybydesign/irmago/server/keyshare"
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
+	"github.com/BeardOfDoom/pq-irmago/internal/keysharecore"
+	"github.com/BeardOfDoom/pq-irmago/server/keyshare"
 
+	"github.com/BeardOfDoom/pq-irmago/server"
 	"github.com/go-errors/errors"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/privacybydesign/irmago/server"
 )
 
 type DBType string

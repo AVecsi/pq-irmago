@@ -3,9 +3,9 @@ package tasks
 import (
 	"html/template"
 
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/server"
-	"github.com/privacybydesign/irmago/server/keyshare"
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/server"
+	"github.com/BeardOfDoom/pq-irmago/server/keyshare"
 	"github.com/sirupsen/logrus"
 )
 

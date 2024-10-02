@@ -8,8 +8,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
 	"github.com/go-errors/errors"
-	"github.com/privacybydesign/irmago/internal/common"
 )
 
 // This file contains data types for scheme managers, issuers, credential types

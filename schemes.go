@@ -17,9 +17,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/privacybydesign/gabi/gabikeys"
-	"github.com/privacybydesign/gabi/signed"
-	"github.com/privacybydesign/irmago/internal/common"
+	"github.com/BeardOfDoom/pq-gabi/gabikeys"
+	"github.com/BeardOfDoom/pq-gabi/signed"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
 	"github.com/sirupsen/logrus"
 
 	"github.com/go-errors/errors"

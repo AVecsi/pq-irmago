@@ -8,10 +8,10 @@ import (
 	"slices"
 	"strings"
 
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
+	"github.com/BeardOfDoom/pq-irmago/server"
 	"github.com/go-errors/errors"
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/internal/common"
-	"github.com/privacybydesign/irmago/server"
 )
 
 type Configuration struct {

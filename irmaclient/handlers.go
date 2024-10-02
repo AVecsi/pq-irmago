@@ -3,8 +3,8 @@ package irmaclient
 import (
 	"fmt"
 
+	irma "github.com/BeardOfDoom/pq-irmago"
 	"github.com/go-errors/errors"
-	irma "github.com/privacybydesign/irmago"
 )
 
 // backgroundIssuanceHandler handles an IRMA issuance session in the background.

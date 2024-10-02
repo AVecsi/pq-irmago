@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"time"
 
+	irma "github.com/BeardOfDoom/pq-irmago"
 	"github.com/bwesterb/go-atum"
 	"github.com/go-errors/errors"
-	irma "github.com/privacybydesign/irmago"
 )
 
 // LogEntry is a log entry of a past event.

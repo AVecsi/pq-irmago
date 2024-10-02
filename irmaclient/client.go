@@ -7,16 +7,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/BeardOfDoom/pq-gabi"
+	"github.com/BeardOfDoom/pq-gabi/big"
+	"github.com/BeardOfDoom/pq-gabi/gabikeys"
+	"github.com/BeardOfDoom/pq-gabi/revocation"
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
+	"github.com/BeardOfDoom/pq-irmago/internal/concmap"
 	"github.com/bwesterb/go-atum"
 	"github.com/go-co-op/gocron"
 	"github.com/go-errors/errors"
-	"github.com/privacybydesign/gabi"
-	"github.com/privacybydesign/gabi/big"
-	"github.com/privacybydesign/gabi/gabikeys"
-	"github.com/privacybydesign/gabi/revocation"
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/internal/common"
-	"github.com/privacybydesign/irmago/internal/concmap"
 )
 
 // This file contains most methods of the Client (c.f. session.go

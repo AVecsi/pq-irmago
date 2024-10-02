@@ -13,13 +13,13 @@ import (
 
 	"github.com/go-co-op/gocron"
 
-	"github.com/privacybydesign/irmago/internal/common"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
 
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/server"
 	"github.com/alexandrevicenzi/go-sse"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-errors/errors"
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/server"
 	"github.com/sirupsen/logrus"
 )
 

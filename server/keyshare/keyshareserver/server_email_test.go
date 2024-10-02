@@ -6,7 +6,7 @@ package keyshareserver
 import (
 	"testing"
 
-	"github.com/privacybydesign/irmago/internal/test"
+	"github.com/BeardOfDoom/pq-irmago/internal/test"
 )
 
 func TestServerRegistrationWithEmail(t *testing.T) {

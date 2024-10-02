@@ -6,10 +6,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/internal/keysharecore"
-	"github.com/privacybydesign/irmago/internal/test"
-	"github.com/privacybydesign/irmago/internal/testkeyshare"
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/internal/keysharecore"
+	"github.com/BeardOfDoom/pq-irmago/internal/test"
+	"github.com/BeardOfDoom/pq-irmago/internal/testkeyshare"
 )
 
 // Test pinchange interaction

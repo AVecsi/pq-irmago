@@ -9,11 +9,11 @@ import (
 
 	"github.com/go-errors/errors"
 
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/internal/test"
-	"github.com/privacybydesign/irmago/irmaclient"
-	"github.com/privacybydesign/irmago/server"
-	"github.com/privacybydesign/irmago/server/requestorserver"
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/internal/test"
+	"github.com/BeardOfDoom/pq-irmago/irmaclient"
+	"github.com/BeardOfDoom/pq-irmago/server"
+	"github.com/BeardOfDoom/pq-irmago/server/requestorserver"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/require"

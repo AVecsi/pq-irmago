@@ -113,7 +113,7 @@ jobs:
         uses: ./.github/actions/integration-test
         with:
           test-ref: ${{ github.ref }}
-          irma-server-artifact: https://github.com/privacybydesign/irmago/releases/download/${{ matrix.irma-server }}/irma-linux-amd64
+          irma-server-artifact: https://github.com/BeardOfDoom/pq-irmago/releases/download/${{ matrix.irma-server }}/irma-linux-amd64
           keyshare-server-artifact: irma-linux-amd64 # Current build
 
   integration-test-serverside: # Checks whether IRMA server interacts with older irmaclients

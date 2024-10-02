@@ -8,10 +8,10 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/BeardOfDoom/pq-gabi/big"
+	"github.com/BeardOfDoom/pq-gabi/gabikeys"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
 	"github.com/go-errors/errors"
-	"github.com/privacybydesign/gabi/big"
-	"github.com/privacybydesign/gabi/gabikeys"
-	"github.com/privacybydesign/irmago/internal/common"
 )
 
 type (

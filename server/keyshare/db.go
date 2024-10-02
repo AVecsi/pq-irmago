@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/privacybydesign/irmago/internal/common"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
 )
 
 type DB struct {

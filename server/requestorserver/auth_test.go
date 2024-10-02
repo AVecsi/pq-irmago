@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/server"
 	"github.com/golang-jwt/jwt/v4"
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/server"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )

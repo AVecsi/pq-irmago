@@ -12,13 +12,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/BeardOfDoom/pq-gabi/gabikeys"
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
 	"github.com/go-co-op/gocron"
 	"github.com/go-errors/errors"
 	"github.com/go-redis/redis/v8"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/privacybydesign/gabi/gabikeys"
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/internal/common"
 	"github.com/sirupsen/logrus"
 )
 
@@ -45,7 +45,7 @@ type Configuration struct {
 	// ensure (using eg a reverse proxy with TLS enabled) that the attributes are protected in transit.
 	DisableTLS bool `json:"disable_tls" mapstructure:"disable_tls"`
 	// (Optional) email address of server admin, for incidental notifications such as breaking API changes
-	// See https://github.com/privacybydesign/irmago/tree/master/server#specifying-an-email-address
+	// See https://github.com/BeardOfDoom/pq-irmago/tree/master/server#specifying-an-email-address
 	// for more information
 	Email string `json:"email" mapstructure:"email"`
 	// Enable server sent events for status updates (experimental; tends to hang when a reverse proxy is used)

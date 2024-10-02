@@ -3,7 +3,7 @@ package irmaclient
 import (
 	"testing"
 
-	"github.com/privacybydesign/irmago/internal/test"
+	"github.com/BeardOfDoom/pq-irmago/internal/test"
 )
 
 func TestConvertingLegacyStorage(t *testing.T) {

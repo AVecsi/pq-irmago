@@ -8,10 +8,10 @@ import (
 	"encoding/binary"
 	"time"
 
-	"github.com/privacybydesign/gabi"
-	"github.com/privacybydesign/gabi/big"
-	"github.com/privacybydesign/gabi/gabikeys"
-	irma "github.com/privacybydesign/irmago"
+	"github.com/BeardOfDoom/pq-gabi"
+	"github.com/BeardOfDoom/pq-gabi/big"
+	"github.com/BeardOfDoom/pq-gabi/gabikeys"
+	irma "github.com/BeardOfDoom/pq-irmago"
 
 	"github.com/go-errors/errors"
 	"github.com/golang-jwt/jwt/v4"

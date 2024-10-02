@@ -29,7 +29,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/privacybydesign/gabi/gabikeys"
+	"github.com/BeardOfDoom/pq-gabi/gabikeys"
 	"github.com/spf13/cobra"
 
 	"github.com/go-errors/errors"

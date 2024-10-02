@@ -9,11 +9,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/privacybydesign/gabi"
-	"github.com/privacybydesign/gabi/signed"
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/internal/common"
-	"github.com/privacybydesign/irmago/server"
+	"github.com/BeardOfDoom/pq-gabi"
+	"github.com/BeardOfDoom/pq-gabi/signed"
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
+	"github.com/BeardOfDoom/pq-irmago/server"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-errors/errors"

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/privacybydesign/irmago/internal/test"
+	"github.com/BeardOfDoom/pq-irmago/internal/test"
 	"github.com/stretchr/testify/assert"
 )
 

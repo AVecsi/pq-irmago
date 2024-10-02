@@ -6,9 +6,9 @@ import (
 	"log"
 	gobig "math/big"
 
+	"github.com/BeardOfDoom/pq-gabi"
+	"github.com/BeardOfDoom/pq-gabi/big"
 	"github.com/bwesterb/go-atum"
-	"github.com/privacybydesign/gabi"
-	"github.com/privacybydesign/gabi/big"
 )
 
 const LDContextSignedMessage = "https://irma.app/ld/signature/v2"

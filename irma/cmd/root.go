@@ -5,8 +5,8 @@ import (
 	"os"
 	"runtime"
 
+	irma "github.com/BeardOfDoom/pq-irmago"
 	"github.com/go-errors/errors"
-	irma "github.com/privacybydesign/irmago"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )

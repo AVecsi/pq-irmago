@@ -3,9 +3,9 @@ package keyshare
 import (
 	"net/http"
 
+	"github.com/BeardOfDoom/pq-irmago/internal/keysharecore"
+	"github.com/BeardOfDoom/pq-irmago/server"
 	"github.com/go-errors/errors"
-	"github.com/privacybydesign/irmago/internal/keysharecore"
-	"github.com/privacybydesign/irmago/server"
 )
 
 var (

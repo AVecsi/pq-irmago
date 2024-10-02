@@ -10,19 +10,19 @@ import (
 
 	"github.com/go-co-op/gocron"
 
+	"github.com/BeardOfDoom/pq-gabi"
+	"github.com/BeardOfDoom/pq-gabi/big"
+	"github.com/BeardOfDoom/pq-gabi/signed"
+	irma "github.com/BeardOfDoom/pq-irmago"
 	"github.com/go-errors/errors"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/hashicorp/go-multierror"
-	"github.com/privacybydesign/gabi"
-	"github.com/privacybydesign/gabi/big"
-	"github.com/privacybydesign/gabi/signed"
-	irma "github.com/privacybydesign/irmago"
 
-	"github.com/privacybydesign/irmago/internal/common"
-	"github.com/privacybydesign/irmago/internal/keysharecore"
-	"github.com/privacybydesign/irmago/server"
-	"github.com/privacybydesign/irmago/server/irmaserver"
-	"github.com/privacybydesign/irmago/server/keyshare"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
+	"github.com/BeardOfDoom/pq-irmago/internal/keysharecore"
+	"github.com/BeardOfDoom/pq-irmago/server"
+	"github.com/BeardOfDoom/pq-irmago/server/irmaserver"
+	"github.com/BeardOfDoom/pq-irmago/server/keyshare"
 
 	"github.com/go-chi/chi/v5"
 )

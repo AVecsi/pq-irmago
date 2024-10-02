@@ -9,10 +9,10 @@ import (
 
 	"github.com/go-errors/errors"
 
+	"github.com/BeardOfDoom/pq-gabi"
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/server"
 	"github.com/go-redis/redis/v8"
-	"github.com/privacybydesign/gabi"
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/server"
 
 	"github.com/sirupsen/logrus"
 )

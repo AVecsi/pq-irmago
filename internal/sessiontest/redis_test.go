@@ -21,11 +21,11 @@ import (
 	"testing"
 	"time"
 
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/internal/test"
+	"github.com/BeardOfDoom/pq-irmago/server"
+	"github.com/BeardOfDoom/pq-irmago/server/requestorserver"
 	"github.com/alicebob/miniredis/v2"
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/internal/test"
-	"github.com/privacybydesign/irmago/server"
-	"github.com/privacybydesign/irmago/server/requestorserver"
 	"github.com/stretchr/testify/require"
 )
 

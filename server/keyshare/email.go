@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/BeardOfDoom/pq-irmago/server"
 	"github.com/go-errors/errors"
-	"github.com/privacybydesign/irmago/server"
 )
 
 type EmailConfiguration struct {

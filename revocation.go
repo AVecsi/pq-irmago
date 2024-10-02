@@ -10,13 +10,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/BeardOfDoom/pq-gabi/big"
+	"github.com/BeardOfDoom/pq-gabi/gabikeys"
+	"github.com/BeardOfDoom/pq-gabi/revocation"
+	"github.com/BeardOfDoom/pq-gabi/signed"
 	"github.com/alexandrevicenzi/go-sse"
 	"github.com/go-errors/errors"
 	"github.com/hashicorp/go-multierror"
-	"github.com/privacybydesign/gabi/big"
-	"github.com/privacybydesign/gabi/gabikeys"
-	"github.com/privacybydesign/gabi/revocation"
-	"github.com/privacybydesign/gabi/signed"
 	sseclient "github.com/sietseringers/go-sse"
 )
 

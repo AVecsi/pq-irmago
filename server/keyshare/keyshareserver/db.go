@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql/driver"
 
-	"github.com/privacybydesign/irmago/internal/keysharecore"
+	"github.com/BeardOfDoom/pq-irmago/internal/keysharecore"
 
 	"github.com/go-errors/errors"
 )

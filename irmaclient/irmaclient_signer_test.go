@@ -3,9 +3,9 @@ package irmaclient
 import (
 	"testing"
 
+	"github.com/BeardOfDoom/pq-gabi/signed"
+	"github.com/BeardOfDoom/pq-irmago/internal/test"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/privacybydesign/gabi/signed"
-	"github.com/privacybydesign/irmago/internal/test"
 	"github.com/stretchr/testify/require"
 )
 

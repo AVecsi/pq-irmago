@@ -9,10 +9,10 @@ import (
 
 	"go.etcd.io/bbolt"
 
-	"github.com/privacybydesign/gabi"
-	"github.com/privacybydesign/gabi/revocation"
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/internal/common"
+	"github.com/BeardOfDoom/pq-gabi"
+	"github.com/BeardOfDoom/pq-gabi/revocation"
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
 
 	"github.com/go-errors/errors"
 )

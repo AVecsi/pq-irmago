@@ -3,8 +3,8 @@ package cmd
 import (
 	"encoding/json"
 
+	"github.com/BeardOfDoom/pq-irmago/server/requestorserver"
 	"github.com/go-errors/errors"
-	"github.com/privacybydesign/irmago/server/requestorserver"
 	"github.com/spf13/cobra"
 )
 

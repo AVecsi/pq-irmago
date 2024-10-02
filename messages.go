@@ -3,20 +3,20 @@ package irma
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/privacybydesign/gabi/big"
+	"github.com/BeardOfDoom/pq-gabi/big"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/privacybydesign/irmago/internal/common"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
 
 	"fmt"
 
+	"github.com/BeardOfDoom/pq-gabi"
 	"github.com/fxamacker/cbor"
 	"github.com/go-errors/errors"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/privacybydesign/gabi"
 )
 
 // ClientStatus encodes the client status of an IRMA session (e.g., connected).

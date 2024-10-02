@@ -1,10 +1,10 @@
 package cmd
 
 import (
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/server"
+	"github.com/BeardOfDoom/pq-irmago/server/keyshare/myirmaserver"
 	"github.com/go-errors/errors"
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/server"
-	"github.com/privacybydesign/irmago/server/keyshare/myirmaserver"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

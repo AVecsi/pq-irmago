@@ -16,11 +16,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/BeardOfDoom/pq-irmago/internal/concmap"
 	"github.com/go-co-op/gocron"
-	"github.com/privacybydesign/irmago/internal/concmap"
 
-	"github.com/privacybydesign/gabi/gabikeys"
-	"github.com/privacybydesign/irmago/internal/common"
+	"github.com/BeardOfDoom/pq-gabi/gabikeys"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
 
 	"github.com/go-errors/errors"
 	"github.com/golang-jwt/jwt/v4"

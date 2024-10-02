@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/privacybydesign/irmago/server/keyshare"
+	"github.com/BeardOfDoom/pq-irmago/server/keyshare"
 )
 
 // memoryDB provides an easy-to-configure testing implementation of the

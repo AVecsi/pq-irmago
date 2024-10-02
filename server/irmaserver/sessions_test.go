@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/privacybydesign/irmago/internal/test"
+	"github.com/BeardOfDoom/pq-irmago/internal/test"
 
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/server"
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/server"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )

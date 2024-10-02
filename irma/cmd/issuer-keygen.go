@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/BeardOfDoom/pq-gabi/gabikeys"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
 	"github.com/go-errors/errors"
-	"github.com/privacybydesign/gabi/gabikeys"
-	"github.com/privacybydesign/irmago/internal/common"
 	"github.com/spf13/cobra"
 )
 

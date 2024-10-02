@@ -4,9 +4,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/privacybydesign/gabi"
+	"github.com/BeardOfDoom/pq-gabi"
 
-	irma "github.com/privacybydesign/irmago"
+	irma "github.com/BeardOfDoom/pq-irmago"
 )
 
 type session struct {

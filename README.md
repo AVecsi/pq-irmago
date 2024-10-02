@@ -1,4 +1,4 @@
-# irmago &nbsp; [![GoDoc](https://godoc.org/github.com/privacybydesign/irmago?status.svg)](https://godoc.org/github.com/privacybydesign/irmago) [![Go Report Card](https://goreportcard.com/badge/github.com/privacybydesign/irmago)](https://goreportcard.com/report/github.com/privacybydesign/irmago)
+# irmago &nbsp; [![GoDoc](https://godoc.org/github.com/BeardOfDoom/pq-irmago?status.svg)](https://godoc.org/github.com/BeardOfDoom/pq-irmago) [![Go Report Card](https://goreportcard.com/badge/github.com/BeardOfDoom/pq-irmago)](https://goreportcard.com/report/github.com/BeardOfDoom/pq-irmago)
 
 `irmago` is an IRMA implementation in Go. It contains multiple libraries and applications:
 
@@ -33,11 +33,11 @@ You can run the `irma keyshare` services locally using the test configuration in
 ### Using Go
 To install the latest released version of the `irma` command line tool using Go, you do the following.
 
-    go install github.com/privacybydesign/irmago/irma@latest
+    go install github.com/BeardOfDoom/pq-irmago/irma@latest
 
 You can also specify an exact version. You should replace `v0.0.0` with the desired version number.
   
-    go install github.com/privacybydesign/irmago/irma@v0.0.0
+    go install github.com/BeardOfDoom/pq-irmago/irma@v0.0.0
 
 ### Using a container
 If you want a container image of the `irma` command line tool, then you can use our `ghcr.io/privacybydesign/irma` image.
@@ -49,7 +49,7 @@ The images are tagged in the following way:
 - `edge`: HEAD of the main development branch (`master`)
 - `v0.0.0`: `irma` version (replace `v0.0.0` with the desired version number)
 
-When you build for production, we recommend you to use the [latest release](https://github.com/privacybydesign/irmago/releases/latest).
+When you build for production, we recommend you to use the [latest release](https://github.com/BeardOfDoom/pq-irmago/releases/latest).
 
 In case you want to use `v0.12.6` or lower, then you should build it yourself.
 
@@ -59,8 +59,8 @@ In case you want to use `v0.12.6` or lower, then you should build it yourself.
     docker build -t privacybydesign/irma:$VERSION .
 
 ### Using pre-compiled binaries
-You can find pre-compiled binaries of the `irma` command line tool on the [GitHub release page](https://github.com/privacybydesign/irmago/releases).
-We recommend you to use the [latest release](https://github.com/privacybydesign/irmago/releases/latest).
+You can find pre-compiled binaries of the `irma` command line tool on the [GitHub release page](https://github.com/BeardOfDoom/pq-irmago/releases).
+We recommend you to use the [latest release](https://github.com/BeardOfDoom/pq-irmago/releases/latest).
 
 ## Running the unit tests
 

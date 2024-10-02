@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/server"
 	"github.com/go-errors/errors"
 	"github.com/go-redis/redis/v8"
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/server"
 	"github.com/sirupsen/logrus"
 )
 

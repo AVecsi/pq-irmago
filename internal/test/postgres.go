@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/privacybydesign/irmago/internal/common"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
 	"github.com/stretchr/testify/require"
 )
 

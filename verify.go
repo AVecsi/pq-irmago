@@ -5,12 +5,12 @@ import (
 	"slices"
 	"time"
 
+	"github.com/BeardOfDoom/pq-gabi"
+	"github.com/BeardOfDoom/pq-gabi/big"
+	"github.com/BeardOfDoom/pq-gabi/gabikeys"
+	"github.com/BeardOfDoom/pq-gabi/revocation"
 	"github.com/go-errors/errors"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/privacybydesign/gabi"
-	"github.com/privacybydesign/gabi/big"
-	"github.com/privacybydesign/gabi/gabikeys"
-	"github.com/privacybydesign/gabi/revocation"
 )
 
 // ProofStatus is the status of the complete proof

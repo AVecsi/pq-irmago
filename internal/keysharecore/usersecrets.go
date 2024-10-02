@@ -8,11 +8,11 @@ import (
 	"crypto/subtle"
 	"encoding/binary"
 
+	"github.com/BeardOfDoom/pq-gabi/big"
+	"github.com/BeardOfDoom/pq-gabi/signed"
 	"github.com/fxamacker/cbor"
 	"github.com/go-errors/errors"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/privacybydesign/gabi/big"
-	"github.com/privacybydesign/gabi/signed"
 )
 
 type (

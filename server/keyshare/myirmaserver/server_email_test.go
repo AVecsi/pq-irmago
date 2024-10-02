@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/privacybydesign/irmago/internal/test"
+	"github.com/BeardOfDoom/pq-irmago/internal/test"
 )
 
 func TestServerLoginEmail(t *testing.T) {

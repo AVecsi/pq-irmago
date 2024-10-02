@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/BeardOfDoom/pq-gabi"
+	"github.com/BeardOfDoom/pq-gabi/big"
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
 	"github.com/bwesterb/go-atum"
 	"github.com/go-errors/errors"
-	"github.com/privacybydesign/gabi"
-	"github.com/privacybydesign/gabi/big"
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/internal/common"
 )
 
 // This file contains the logic and state of performing IRMA sessions, communicates

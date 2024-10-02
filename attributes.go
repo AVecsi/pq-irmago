@@ -6,10 +6,10 @@ import (
 	"encoding/hex"
 	"time"
 
+	"github.com/BeardOfDoom/pq-gabi/big"
+	"github.com/BeardOfDoom/pq-gabi/gabikeys"
 	"github.com/eknkc/basex"
 	"github.com/go-errors/errors"
-	"github.com/privacybydesign/gabi/big"
-	"github.com/privacybydesign/gabi/gabikeys"
 )
 
 const (

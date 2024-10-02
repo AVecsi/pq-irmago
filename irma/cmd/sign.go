@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/BeardOfDoom/pq-gabi/signed"
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
 	"github.com/go-errors/errors"
-	"github.com/privacybydesign/gabi/signed"
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/internal/common"
 	"github.com/spf13/cobra"
 )
 

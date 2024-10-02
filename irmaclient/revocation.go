@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/BeardOfDoom/pq-gabi/revocation"
+	irma "github.com/BeardOfDoom/pq-irmago"
 	"github.com/go-errors/errors"
-	"github.com/privacybydesign/gabi/revocation"
-	irma "github.com/privacybydesign/irmago"
 	"github.com/sirupsen/logrus"
 )
 

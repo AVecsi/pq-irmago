@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/privacybydesign/gabi/big"
-	"github.com/privacybydesign/gabi/gabikeys"
-	"github.com/privacybydesign/gabi/keyproof"
-	"github.com/privacybydesign/irmago/internal/common"
+	"github.com/BeardOfDoom/pq-gabi/big"
+	"github.com/BeardOfDoom/pq-gabi/gabikeys"
+	"github.com/BeardOfDoom/pq-gabi/keyproof"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
 	"github.com/spf13/cobra"
 )
 

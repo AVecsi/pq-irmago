@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"os"
 
-	"github.com/privacybydesign/irmago/internal/keysharecore"
+	"github.com/BeardOfDoom/pq-irmago/internal/keysharecore"
 	"github.com/spf13/cobra"
 )
 

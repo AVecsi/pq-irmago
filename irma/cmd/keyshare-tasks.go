@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/privacybydesign/irmago/server/keyshare/tasks"
+	"github.com/BeardOfDoom/pq-irmago/server/keyshare/tasks"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

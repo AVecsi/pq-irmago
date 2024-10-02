@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
+	"github.com/BeardOfDoom/pq-irmago/server"
+	"github.com/BeardOfDoom/pq-irmago/server/keyshare"
 	"github.com/go-errors/errors"
-	"github.com/privacybydesign/irmago/internal/common"
-	"github.com/privacybydesign/irmago/server"
-	"github.com/privacybydesign/irmago/server/keyshare"
 )
 
 // postgresDB provides a postgres-backed implementation of DB

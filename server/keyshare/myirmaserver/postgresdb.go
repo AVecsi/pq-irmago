@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/BeardOfDoom/pq-irmago/server"
+	"github.com/BeardOfDoom/pq-irmago/server/keyshare"
 	"github.com/go-errors/errors"
-	"github.com/privacybydesign/irmago/server"
-	"github.com/privacybydesign/irmago/server/keyshare"
 )
 
 type postgresDB struct {

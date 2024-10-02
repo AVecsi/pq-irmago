@@ -5,10 +5,10 @@ import (
 	"encoding/asn1"
 	gobig "math/big"
 
+	"github.com/BeardOfDoom/pq-gabi"
+	"github.com/BeardOfDoom/pq-gabi/big"
 	"github.com/bwesterb/go-atum"
 	"github.com/go-errors/errors"
-	"github.com/privacybydesign/gabi"
-	"github.com/privacybydesign/gabi/big"
 )
 
 // GetTimestamp GETs a signed timestamp (a signature over the current time and the parameters)

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	irma "github.com/privacybydesign/irmago"
+	irma "github.com/BeardOfDoom/pq-irmago"
 	"github.com/stretchr/testify/require"
 )
 

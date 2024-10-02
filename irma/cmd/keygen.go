@@ -8,9 +8,9 @@ import (
 
 	"fmt"
 
+	"github.com/BeardOfDoom/pq-gabi/signed"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
 	"github.com/go-errors/errors"
-	"github.com/privacybydesign/gabi/signed"
-	"github.com/privacybydesign/irmago/internal/common"
 	"github.com/spf13/cobra"
 )
 

@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/privacybydesign/irmago/internal/common"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
 	"io"
 	"net/http"
 	"testing"
 	"time"
 
-	"github.com/privacybydesign/irmago"
+	"github.com/BeardOfDoom/pq-irmago"
 	"github.com/stretchr/testify/require"
 )
 

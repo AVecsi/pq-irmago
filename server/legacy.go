@@ -1,8 +1,8 @@
 package server
 
 import (
+	irma "github.com/BeardOfDoom/pq-irmago"
 	"github.com/go-errors/errors"
-	irma "github.com/privacybydesign/irmago"
 )
 
 func parseLegacySessionRequest(r []byte) (irma.RequestorRequest, error) {

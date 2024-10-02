@@ -3,9 +3,9 @@ package sessiontest
 import (
 	"testing"
 
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/internal/test"
-	"github.com/privacybydesign/irmago/server/irmaserver"
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/internal/test"
+	"github.com/BeardOfDoom/pq-irmago/server/irmaserver"
 	"github.com/stretchr/testify/require"
 )
 

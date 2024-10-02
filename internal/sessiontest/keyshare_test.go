@@ -4,11 +4,11 @@ import (
 	"testing"
 	"time"
 
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/internal/test"
-	"github.com/privacybydesign/irmago/internal/testkeyshare"
-	"github.com/privacybydesign/irmago/irmaclient"
-	"github.com/privacybydesign/irmago/server/irmaserver"
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/internal/test"
+	"github.com/BeardOfDoom/pq-irmago/internal/testkeyshare"
+	"github.com/BeardOfDoom/pq-irmago/irmaclient"
+	"github.com/BeardOfDoom/pq-irmago/server/irmaserver"
 	"github.com/stretchr/testify/require"
 )
 

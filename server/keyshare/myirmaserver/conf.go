@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
+	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/BeardOfDoom/pq-irmago/server"
+	"github.com/BeardOfDoom/pq-irmago/server/keyshare"
 	"github.com/go-errors/errors"
 	"github.com/hashicorp/go-multierror"
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/server"
-	"github.com/privacybydesign/irmago/server/keyshare"
 )
 
 type DBType string

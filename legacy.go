@@ -3,9 +3,9 @@ package irma
 import (
 	"encoding/json"
 
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
 	"github.com/go-errors/errors"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/privacybydesign/irmago/internal/common"
 )
 
 // This file contains compatibility code for the legacy, pre-condiscon session requests,

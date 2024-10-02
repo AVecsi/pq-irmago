@@ -15,16 +15,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/BeardOfDoom/pq-gabi"
+	"github.com/BeardOfDoom/pq-gabi/revocation"
 	"github.com/go-errors/errors"
 	"github.com/hashicorp/go-retryablehttp"
-	"github.com/privacybydesign/gabi"
-	"github.com/privacybydesign/gabi/revocation"
 	sseclient "github.com/sietseringers/go-sse"
 	"github.com/sirupsen/logrus"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 
-	"github.com/privacybydesign/irmago/internal/common"
-	"github.com/privacybydesign/irmago/internal/disable_sigpipe"
+	"github.com/BeardOfDoom/pq-irmago/internal/common"
+	"github.com/BeardOfDoom/pq-irmago/internal/disable_sigpipe"
 )
 
 const responseDeadline = 10 * time.Second
@@ -362,5 +362,5 @@ func (p httpPublicSuffixList) PublicSuffix(domain string) string {
 }
 
 func (p httpPublicSuffixList) String() string {
-	return "github.com/privacybydesign/irmago/httpPublicSuffixList-v1"
+	return "github.com/BeardOfDoom/pq-irmago/httpPublicSuffixList-v1"
 }
