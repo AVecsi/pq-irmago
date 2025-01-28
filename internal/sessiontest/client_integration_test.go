@@ -25,8 +25,8 @@ import (
 	"strings"
 	"testing"
 
-	irma "github.com/BeardOfDoom/pq-irmago"
-	"github.com/BeardOfDoom/pq-irmago/internal/test"
+	irma "github.com/AVecsi/pq-irmago"
+	"github.com/AVecsi/pq-irmago/internal/test"
 )
 
 func TestClientIntegration(t *testing.T) {
@@ -71,6 +71,5 @@ func TestClientIntegration(t *testing.T) {
 		req := getIssuanceRequest(false)
 		doSession(t, req, client, nil, nil, nil, nil, optionReuseServer, optionForceNoAuth)
 
-		keyshareSessions(t, client, nil, optionReuseServer, optionForceNoAuth)
 	})
 }

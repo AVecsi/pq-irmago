@@ -8,15 +8,16 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	irma "github.com/BeardOfDoom/pq-irmago"
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 
-	"github.com/BeardOfDoom/pq-irmago/server"
-	"github.com/BeardOfDoom/pq-irmago/server/irmaserver"
+	irma "github.com/AVecsi/pq-irmago"
+	"github.com/AVecsi/pq-irmago/internal/common"
+
+	"github.com/AVecsi/pq-irmago/server"
+	"github.com/AVecsi/pq-irmago/server/irmaserver"
 )
 
 var s *irmaserver.Server

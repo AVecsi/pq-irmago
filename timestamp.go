@@ -5,8 +5,7 @@ import (
 	"encoding/asn1"
 	gobig "math/big"
 
-	"github.com/BeardOfDoom/pq-gabi"
-	"github.com/BeardOfDoom/pq-gabi/big"
+	"github.com/AVecsi/pq-gabi/big"
 	"github.com/bwesterb/go-atum"
 	"github.com/go-errors/errors"
 )
@@ -58,15 +57,15 @@ func TimestampRequest(message string, sigs []*big.Int, disclosed [][]*big.Int, n
 			if len(disclosed[i]) < 2 || disclosed[i][1].Cmp(bigZero) == 0 {
 				return nil, "", errors.Errorf("metadata attribute of credential %d not disclosed", i)
 			}
-			pk, err := conf.PublicKey(meta.CredentialType().IssuerIdentifier(), meta.KeyCounter())
-			if err != nil {
-				return nil, "", err
-			}
-			r, err := gabi.RepresentToPublicKey(pk, disclosed[i])
-			if err != nil {
-				return nil, "", err
-			}
-			dlreps[i] = r.Go()
+			// pk, err := conf.PublicKey(meta.CredentialType().IssuerIdentifier(), meta.KeyCounter())
+			// if err != nil {
+			// 	return nil, "", err
+			// }
+			// r, err := gabi.RepresentToPublicKey(pk, disclosed[i])
+			// if err != nil {
+			// 	return nil, "", err
+			// }
+			// dlreps[i] = r.Go()
 		}
 
 		// Determine timestamp server that should be used
@@ -104,26 +103,19 @@ func TimestampRequest(message string, sigs []*big.Int, disclosed [][]*big.Int, n
 func (sm *SignedMessage) VerifyTimestamp(message string, conf *Configuration) error {
 	// Extract the disclosed attributes and randomized CL-signatures from the proofs in order to
 	// construct the nonce that should be signed by the timestamp server.
-	zero := big.NewInt(0)
-	size := len(sm.Signature)
+	size := len(sm.Signature.CredentialDisclosures)
 	sigs := make([]*big.Int, size)
 	disclosed := make([][]*big.Int, size)
-	for i, proof := range sm.Signature {
-		proofd := proof.(*gabi.ProofD)
-		sigs[i] = proofd.A
-		ct := MetadataFromInt(proofd.ADisclosed[1], conf).CredentialType()
+	for i, proofd := range sm.Signature.CredentialDisclosures {
+		sigs[i] = new(big.Int).SetBytes(proofd.SignatureProof.Proof)
+		ct := MetadataFromInt(proofd.DisclosedAttributes[1].IntValue(), conf).CredentialType()
 		if ct == nil {
 			return errors.New("Cannot verify timestamp: signature contains attributes from unknown credential type")
 		}
 		attrcount := len(ct.AttributeTypes) + 2 // plus secret key and metadata
 		disclosed[i] = make([]*big.Int, attrcount)
 		for j := 0; j < attrcount; j++ {
-			val, ok := proofd.ADisclosed[j]
-			if !ok {
-				disclosed[i][j] = zero
-			} else {
-				disclosed[i][j] = val
-			}
+			disclosed[i][j] = proofd.DisclosedAttributes[j].IntValue()
 		}
 	}
 

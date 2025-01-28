@@ -25,11 +25,10 @@ package cmd
 import (
 	"time"
 
-	"fmt"
 	"regexp"
 	"strconv"
 
-	"github.com/BeardOfDoom/pq-gabi/gabikeys"
+	"github.com/AVecsi/pq-gabi/gabikeys"
 	"github.com/spf13/cobra"
 
 	"github.com/go-errors/errors"
@@ -42,18 +41,8 @@ var genkeypairCmd = &cobra.Command{
 	Long:       `The genkeypair command generates an IRMA issuer keypair.`,
 	Deprecated: `use "irma scheme issuer keygen" instead`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		keylength, err := cmd.Flags().GetInt("keylength")
-		if err != nil {
-			return err
-		}
 
 		counter, err := cmd.Flags().GetUint("counter")
-
-		if err != nil {
-			return err
-		}
-
-		numAttributes, err := cmd.Flags().GetInt("numattributes")
 		if err != nil {
 			return err
 		}
@@ -114,11 +103,9 @@ var genkeypairCmd = &cobra.Command{
 		}
 
 		// Now generate the key pair
-		sysParams, ok := gabikeys.DefaultSystemParameters[keylength]
-		if !ok {
-			return fmt.Errorf("unsupported key length, should be one of %v", gabikeys.DefaultKeyLengths)
-		}
-		privk, pubk, err := gabikeys.GenerateKeyPair(sysParams, numAttributes, counter, expiryDate)
+		//TODO VADAM seed should be random
+		seed := make([]byte, 32)
+		privk, pubk, err := gabikeys.GenerateKeyPair(seed, counter, expiryDate)
 		if err != nil {
 			return err
 		}

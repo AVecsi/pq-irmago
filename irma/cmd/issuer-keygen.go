@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/BeardOfDoom/pq-gabi/gabikeys"
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
+	"github.com/AVecsi/pq-gabi/gabikeys"
+	"github.com/AVecsi/pq-irmago/internal/common"
 	"github.com/go-errors/errors"
 	"github.com/spf13/cobra"
 )
@@ -29,9 +29,7 @@ After adding keys, the scheme must be resigned (using "irma scheme sign") before
 IRMA applications.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		flags := cmd.Flags()
-		keylength, _ := flags.GetInt("keylength")
 		counter, _ := flags.GetUint("counter")
-		numAttributes, _ := flags.GetInt("numattributes")
 		privkeyfile, _ := flags.GetString("privatekey")
 		pubkeyfile, _ := flags.GetString("publickey")
 		overwrite, _ := flags.GetBool("force-overwrite")
@@ -89,11 +87,9 @@ IRMA applications.`,
 
 		// Now generate the key pair
 		fmt.Println("Generating keys (may take several minutes)")
-		sysParams, ok := gabikeys.DefaultSystemParameters[keylength]
-		if !ok {
-			return errors.Errorf("Unsupported key length, should be one of %v", gabikeys.DefaultKeyLengths)
-		}
-		privk, pubk, err := gabikeys.GenerateKeyPair(sysParams, numAttributes, counter, expiryDate)
+		//TODO VADAM seed should be random
+		seed := make([]byte, 32)
+		privk, pubk, err := gabikeys.GenerateKeyPair(seed, counter, expiryDate)
 		if err != nil {
 			return err
 		}

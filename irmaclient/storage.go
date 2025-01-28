@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/BeardOfDoom/pq-gabi"
-	"github.com/BeardOfDoom/pq-gabi/revocation"
-	irma "github.com/BeardOfDoom/pq-irmago"
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
+	gabi "github.com/AVecsi/pq-gabi"
+	"github.com/AVecsi/pq-gabi/revocation"
+	irma "github.com/AVecsi/pq-irmago"
+	"github.com/AVecsi/pq-irmago/internal/common"
 
 	"github.com/go-errors/errors"
 	"go.etcd.io/bbolt"

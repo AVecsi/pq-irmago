@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
-	irma "github.com/BeardOfDoom/pq-irmago"
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
-	"github.com/BeardOfDoom/pq-irmago/internal/test"
-	"github.com/BeardOfDoom/pq-irmago/server"
-	"github.com/BeardOfDoom/pq-irmago/server/irmaserver"
-	"github.com/BeardOfDoom/pq-irmago/server/requestorserver"
+	irma "github.com/AVecsi/pq-irmago"
+	"github.com/AVecsi/pq-irmago/internal/common"
+	"github.com/AVecsi/pq-irmago/internal/test"
+	"github.com/AVecsi/pq-irmago/server"
+	"github.com/AVecsi/pq-irmago/server/irmaserver"
+	"github.com/AVecsi/pq-irmago/server/requestorserver"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -235,12 +235,7 @@ func IrmaServerConfiguration() *server.Configuration {
 		DisableSchemesUpdate:  true,
 		SchemesPath:           filepath.Join(testdata, "irma_configuration"),
 		IssuerPrivateKeysPath: filepath.Join(testdata, "privatekeys"),
-		RevocationSettings: irma.RevocationSettings{
-			revocationTestCred:        {RevocationServerURL: revocationServerURL, SSE: true},
-			revKeyshareTestCred:       {RevocationServerURL: revocationServerURL},
-			revKeyshareSecondTestCred: {RevocationServerURL: revocationServerURL},
-		},
-		JwtPrivateKeyFile: jwtPrivkeyPath,
+		JwtPrivateKeyFile:     jwtPrivkeyPath,
 		StaticSessions: map[string]interface{}{
 			"staticsession": irma.ServiceProviderRequest{
 				RequestorBaseRequest: irma.RequestorBaseRequest{

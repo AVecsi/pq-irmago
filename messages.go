@@ -3,17 +3,18 @@ package irma
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/BeardOfDoom/pq-gabi/big"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
+	"github.com/AVecsi/pq-gabi/big"
+
+	"github.com/AVecsi/pq-irmago/internal/common"
 
 	"fmt"
 
-	"github.com/BeardOfDoom/pq-gabi"
+	gabi "github.com/AVecsi/pq-gabi"
 	"github.com/fxamacker/cbor"
 	"github.com/go-errors/errors"
 	"github.com/golang-jwt/jwt/v4"
@@ -281,7 +282,7 @@ const (
 )
 
 type Disclosure struct {
-	Proofs  gabi.ProofList            `json:"proofs"`
+	Proofs  gabi.DisclosureProof      `json:"proofs"`
 	Indices DisclosedAttributeIndices `json:"indices"`
 }
 
@@ -298,7 +299,7 @@ type DisclosedAttributeIndex struct {
 }
 
 type IssueCommitmentMessage struct {
-	*gabi.IssueCommitmentMessage
+	Proofs  *gabi.DisclosureProof
 	Indices DisclosedAttributeIndices `json:"indices,omitempty"`
 }
 
@@ -378,27 +379,6 @@ const (
 	KeyshareAuthMethodChallengeResponse = "pin_challengeresponse"
 )
 
-type ProofPCommitmentMap struct {
-	Commitments map[PublicKeyIdentifier]*gabi.ProofPCommitment `json:"c"`
-}
-
-func (ppcm *ProofPCommitmentMap) MarshalJSON() ([]byte, error) {
-	var encPPCM struct {
-		Commitments map[string]*gabi.ProofPCommitment `json:"c"`
-	}
-	encPPCM.Commitments = make(map[string]*gabi.ProofPCommitment)
-
-	for pki, v := range ppcm.Commitments {
-		pkiBytes, err := pki.MarshalText()
-		if err != nil {
-			return nil, err
-		}
-		encPPCM.Commitments[string(pkiBytes)] = v
-	}
-
-	return json.Marshal(encPPCM)
-}
-
 type PMap struct {
 	Ps map[PublicKeyIdentifier]*big.Int `json:"ps"`
 }
@@ -418,11 +398,6 @@ func (pm *PMap) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(encPM)
-}
-
-type GetCommitmentsRequest struct {
-	Keys []PublicKeyIdentifier          `json:"keys"`
-	Hash gabi.KeyshareCommitmentRequest `json:"hw"`
 }
 
 type ProofPCommitmentMapV2 struct {
@@ -501,7 +476,7 @@ func (e *SessionError) Stack() string {
 
 func (i *IssueCommitmentMessage) Disclosure() *Disclosure {
 	return &Disclosure{
-		Proofs:  i.Proofs,
+		Proofs:  *i.Proofs,
 		Indices: i.Indices,
 	}
 }
@@ -559,9 +534,9 @@ func (status ServerStatus) Finished() bool {
 }
 
 type ServerSessionResponse struct {
-	ProofStatus     ProofStatus                   `json:"proofStatus"`
-	IssueSignatures []*gabi.IssueSignatureMessage `json:"sigs,omitempty"`
-	NextSession     *Qr                           `json:"nextSession,omitempty"`
+	ProofStatus     ProofStatus        `json:"proofStatus"`
+	IssueSignatures []*gabi.Credential `json:"sigs,omitempty"`
+	NextSession     *Qr                `json:"nextSession,omitempty"`
 
 	// needed for legacy (un)marshaling
 	ProtocolVersion *ProtocolVersion `json:"-"`

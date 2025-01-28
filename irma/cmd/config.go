@@ -2,15 +2,13 @@ package cmd
 
 import (
 	"crypto/tls"
-	"net/smtp"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
-	irma "github.com/BeardOfDoom/pq-irmago"
-	"github.com/BeardOfDoom/pq-irmago/server"
-	"github.com/BeardOfDoom/pq-irmago/server/keyshare"
+	irma "github.com/AVecsi/pq-irmago"
+	"github.com/AVecsi/pq-irmago/server"
 
 	"github.com/go-errors/errors"
 	"github.com/mitchellh/mapstructure"
@@ -21,27 +19,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-func configureEmail() keyshare.EmailConfiguration {
-	// If username/password are specified for the email server, build an authentication object.
-	var emailAuth smtp.Auth
-	if viper.GetString("email_username") != "" {
-		emailAuth = smtp.PlainAuth(
-			"",
-			viper.GetString("email_username"),
-			viper.GetString("email_password"),
-			viper.GetString("email_hostname"),
-		)
-	}
-
-	return keyshare.EmailConfiguration{
-		EmailServer:     viper.GetString("email_server"),
-		EmailHostname:   viper.GetString("email_hostname"),
-		EmailAuth:       emailAuth,
-		EmailFrom:       viper.GetString("email_from"),
-		DefaultLanguage: viper.GetString("default_language"),
-	}
-}
-
 func configureIRMAServer() (*server.Configuration, error) {
 	conf := &server.Configuration{
 		SchemesPath:            viper.GetString("schemes_path"),
@@ -51,7 +28,6 @@ func configureIRMAServer() (*server.Configuration, error) {
 		IssuerPrivateKeysPath:  viper.GetString("privkeys"),
 		RevocationDBType:       viper.GetString("revocation_db_type"),
 		RevocationDBConnStr:    viper.GetString("revocation_db_str"),
-		RevocationSettings:     irma.RevocationSettings{},
 		URL:                    viper.GetString("url"),
 		DisableTLS:             viper.GetBool("no_tls"),
 		Email:                  viper.GetString("email"),

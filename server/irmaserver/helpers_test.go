@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/BeardOfDoom/pq-irmago/server"
+	"github.com/AVecsi/pq-irmago/server"
 	"github.com/stretchr/testify/require"
 )
 

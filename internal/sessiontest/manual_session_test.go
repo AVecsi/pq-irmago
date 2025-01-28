@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/BeardOfDoom/pq-gabi"
-	"github.com/BeardOfDoom/pq-gabi/big"
-	irma "github.com/BeardOfDoom/pq-irmago"
-	"github.com/BeardOfDoom/pq-irmago/internal/test"
-	"github.com/BeardOfDoom/pq-irmago/irmaclient"
+	"github.com/AVecsi/pq-gabi/big"
+	irma "github.com/AVecsi/pq-irmago"
+	"github.com/AVecsi/pq-irmago/internal/test"
+	"github.com/AVecsi/pq-irmago/irmaclient"
 	"github.com/stretchr/testify/require"
 )
 
@@ -49,8 +48,7 @@ func manualSessionHelper(t *testing.T, client *irmaclient.Client, h *ManualTestH
 	case irma.ActionSigning:
 		if corrupt {
 			// Interesting: modifying C results in INVALID_CRYPTO; modifying A or an attribute results in INVALID_TIMESTAMP
-			i := result.SignatureResult.Signature[0].(*gabi.ProofD).C
-			i.Add(i, big.NewInt(16))
+			result.SignatureResult.Signature.SecretAttrCommitment.Comm[0] += 16
 		}
 		r, _ := verifyAs.(*irma.SignatureRequest)
 		list, status, err := result.SignatureResult.Verify(client.Configuration, r)

@@ -4,7 +4,7 @@ import (
 	"crypto/ecdsa"
 	"testing"
 
-	"github.com/BeardOfDoom/pq-gabi/signed"
+	"github.com/AVecsi/pq-gabi/signed"
 	"github.com/stretchr/testify/require"
 )
 

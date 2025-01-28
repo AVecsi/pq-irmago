@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/BeardOfDoom/pq-gabi"
-	"github.com/BeardOfDoom/pq-gabi/big"
-	irma "github.com/BeardOfDoom/pq-irmago"
+	"github.com/AVecsi/pq-gabi"
+	"github.com/AVecsi/pq-gabi/big"
+	irma "github.com/AVecsi/pq-irmago"
 	"github.com/bwesterb/go-atum"
 	"github.com/go-errors/errors"
 	"github.com/golang-jwt/jwt/v4"

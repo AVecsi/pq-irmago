@@ -50,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - HTTP cookies not stored in `irmaclient` when received from a `Set-Cookie` header
 - Invalid hostname specified in MX record bypasses e-mail address revalidation
 - Background revocation tasks not stopped when closing an `irmaclient`
-- `RemoveScheme` function in `irmaclient` not deleting issuer schemes without a keyshare server ([#260](https://github.com/BeardOfDoom/pq-irmago/issues/260))
+- `RemoveScheme` function in `irmaclient` not deleting issuer schemes without a keyshare server ([#260](https://github.com/AVecsi/pq-irmago/issues/260))
 
 ### Internal
 - Fixed issue with expired `irma-demo.MijnOverheid` key in testdata
@@ -154,7 +154,7 @@ As part of e-mail address revalidation:
 - MyIrma server: `/user` returns an additional field `revalidate_in_progress` in the JSON response body, indicating whether the e-mail address is being revalidated or not
 - MyIrma server: `/user/delete` and `/email/remove` return a 500 status code and `REVALIDATE_EMAIL` error type if one or more e-mail addresses of the user are invalid
 
-**Note:** Enabling e-mail address revalidation requires a change in the database schema. In order to do this please add the `revalidate_on` column of type `bigint` to the `irma.emails` table. See the [schema](https://github.com/BeardOfDoom/pq-irmago/tree/master/server/keyshare/schema.sql#L50) file. Otherwise e-mail address revalidation is disabled and there will not be a breaking change.
+**Note:** Enabling e-mail address revalidation requires a change in the database schema. In order to do this please add the `revalidate_on` column of type `bigint` to the `irma.emails` table. See the [schema](https://github.com/AVecsi/pq-irmago/tree/master/server/keyshare/schema.sql#L50) file. Otherwise e-mail address revalidation is disabled and there will not be a breaking change.
 
 ### Fixed
 - Race conditions in database logic of revocation storage
@@ -309,7 +309,7 @@ Yivi apps have always supported pairing codes.
 
 ### Added
 - `irma session` now supports [static sessions](https://irma.app/docs/irma-server/#static-irma-qrs) and can start sessions from a [session package](https://irma.app/docs/api-irma-server/#post-session)
-- (Requestor) schemes and their contents can now [specify their languages](https://github.com/BeardOfDoom/pq-irmago/pull/194/), which `irma scheme verify` takes into account
+- (Requestor) schemes and their contents can now [specify their languages](https://github.com/AVecsi/pq-irmago/pull/194/), which `irma scheme verify` takes into account
 - Add Apple Silicon builds in releases
 
 ### Fixed
@@ -522,39 +522,39 @@ This release contains several large new features. In particular, the shoulder su
 - Combined issuance-disclosure requests with two schemes one of which has a keyshare server now work as expected
 - Various other bugfixes
 
-[0.16.0]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.15.2...v0.16.0
-[0.15.2]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.15.1...v0.15.2
-[0.15.1]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.15.0...v0.15.1
-[0.15.0]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.14.2...v0.15.0
-[0.14.2]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.14.1...v0.14.2
-[0.14.1]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.14.0...v0.14.1
-[0.14.0]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.13.3...v0.14.0
-[0.13.3]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.13.2...v0.13.3
-[0.13.2]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.13.1...v0.13.2
-[0.13.1]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.13.0...v0.13.1
-[0.13.0]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.12.6...v0.13.0
-[0.12.6]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.12.5...v0.12.6
-[0.12.5]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.12.4...v0.12.5
-[0.12.4]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.12.3...v0.12.4
-[0.12.3]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.12.2...v0.12.3
-[0.12.2]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.12.1...v0.12.2
-[0.12.1]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.12.0...v0.12.1
-[0.12.0]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.11.2...v0.12.0
-[0.11.2]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.11.1...v0.11.2
-[0.11.1]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.11.0...v0.11.1
-[0.11.0]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.10.0...v0.11.0
-[0.10.0]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.9.0...v0.10.0
-[0.9.0]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.8.0...v0.9.0
-[0.8.0]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.7.0...v0.8.0
-[0.7.0]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.6.1...v0.7.0
-[0.6.1]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.6.0...v0.6.1
-[0.6.0]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.5.1...v0.6.0
-[0.5.1]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.5.0...v0.5.1
-[0.5.0]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.5.0-rc.5...v0.5.0
-[0.5.0-rc.5]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.5.0-rc.4...v0.5.0-rc.5
-[0.5.0-rc.4]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.5.0-rc.3...v0.5.0-rc.4
-[0.5.0-rc.3]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.5.0-rc.2...v0.5.0-rc.3
-[0.5.0-rc.2]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.5.0-rc.1...v0.5.0-rc.2
-[0.5.0-rc.1]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.4.1...v0.5.0-rc.1
-[0.4.1]: https://github.com/BeardOfDoom/pq-irmago/compare/v0.4.0...v0.4.1
-[0.4.0]: https://github.com/BeardOfDoom/pq-irmago/tree/v0.4.0
+[0.16.0]: https://github.com/AVecsi/pq-irmago/compare/v0.15.2...v0.16.0
+[0.15.2]: https://github.com/AVecsi/pq-irmago/compare/v0.15.1...v0.15.2
+[0.15.1]: https://github.com/AVecsi/pq-irmago/compare/v0.15.0...v0.15.1
+[0.15.0]: https://github.com/AVecsi/pq-irmago/compare/v0.14.2...v0.15.0
+[0.14.2]: https://github.com/AVecsi/pq-irmago/compare/v0.14.1...v0.14.2
+[0.14.1]: https://github.com/AVecsi/pq-irmago/compare/v0.14.0...v0.14.1
+[0.14.0]: https://github.com/AVecsi/pq-irmago/compare/v0.13.3...v0.14.0
+[0.13.3]: https://github.com/AVecsi/pq-irmago/compare/v0.13.2...v0.13.3
+[0.13.2]: https://github.com/AVecsi/pq-irmago/compare/v0.13.1...v0.13.2
+[0.13.1]: https://github.com/AVecsi/pq-irmago/compare/v0.13.0...v0.13.1
+[0.13.0]: https://github.com/AVecsi/pq-irmago/compare/v0.12.6...v0.13.0
+[0.12.6]: https://github.com/AVecsi/pq-irmago/compare/v0.12.5...v0.12.6
+[0.12.5]: https://github.com/AVecsi/pq-irmago/compare/v0.12.4...v0.12.5
+[0.12.4]: https://github.com/AVecsi/pq-irmago/compare/v0.12.3...v0.12.4
+[0.12.3]: https://github.com/AVecsi/pq-irmago/compare/v0.12.2...v0.12.3
+[0.12.2]: https://github.com/AVecsi/pq-irmago/compare/v0.12.1...v0.12.2
+[0.12.1]: https://github.com/AVecsi/pq-irmago/compare/v0.12.0...v0.12.1
+[0.12.0]: https://github.com/AVecsi/pq-irmago/compare/v0.11.2...v0.12.0
+[0.11.2]: https://github.com/AVecsi/pq-irmago/compare/v0.11.1...v0.11.2
+[0.11.1]: https://github.com/AVecsi/pq-irmago/compare/v0.11.0...v0.11.1
+[0.11.0]: https://github.com/AVecsi/pq-irmago/compare/v0.10.0...v0.11.0
+[0.10.0]: https://github.com/AVecsi/pq-irmago/compare/v0.9.0...v0.10.0
+[0.9.0]: https://github.com/AVecsi/pq-irmago/compare/v0.8.0...v0.9.0
+[0.8.0]: https://github.com/AVecsi/pq-irmago/compare/v0.7.0...v0.8.0
+[0.7.0]: https://github.com/AVecsi/pq-irmago/compare/v0.6.1...v0.7.0
+[0.6.1]: https://github.com/AVecsi/pq-irmago/compare/v0.6.0...v0.6.1
+[0.6.0]: https://github.com/AVecsi/pq-irmago/compare/v0.5.1...v0.6.0
+[0.5.1]: https://github.com/AVecsi/pq-irmago/compare/v0.5.0...v0.5.1
+[0.5.0]: https://github.com/AVecsi/pq-irmago/compare/v0.5.0-rc.5...v0.5.0
+[0.5.0-rc.5]: https://github.com/AVecsi/pq-irmago/compare/v0.5.0-rc.4...v0.5.0-rc.5
+[0.5.0-rc.4]: https://github.com/AVecsi/pq-irmago/compare/v0.5.0-rc.3...v0.5.0-rc.4
+[0.5.0-rc.3]: https://github.com/AVecsi/pq-irmago/compare/v0.5.0-rc.2...v0.5.0-rc.3
+[0.5.0-rc.2]: https://github.com/AVecsi/pq-irmago/compare/v0.5.0-rc.1...v0.5.0-rc.2
+[0.5.0-rc.1]: https://github.com/AVecsi/pq-irmago/compare/v0.4.1...v0.5.0-rc.1
+[0.4.1]: https://github.com/AVecsi/pq-irmago/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/AVecsi/pq-irmago/tree/v0.4.0

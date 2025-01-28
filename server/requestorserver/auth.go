@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/BeardOfDoom/pq-irmago"
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
-	"github.com/BeardOfDoom/pq-irmago/server"
+	irma "github.com/AVecsi/pq-irmago"
+	"github.com/AVecsi/pq-irmago/internal/common"
+	"github.com/AVecsi/pq-irmago/server"
 	"github.com/go-errors/errors"
 	"github.com/golang-jwt/jwt/v4"
 )

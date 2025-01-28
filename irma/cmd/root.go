@@ -5,7 +5,7 @@ import (
 	"os"
 	"runtime"
 
-	irma "github.com/BeardOfDoom/pq-irmago"
+	irma "github.com/AVecsi/pq-irmago"
 	"github.com/go-errors/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

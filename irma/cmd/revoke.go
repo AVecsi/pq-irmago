@@ -3,8 +3,8 @@ package cmd
 import (
 	"time"
 
-	irma "github.com/BeardOfDoom/pq-irmago"
-	"github.com/BeardOfDoom/pq-irmago/server"
+	irma "github.com/AVecsi/pq-irmago"
+	"github.com/AVecsi/pq-irmago/server"
 	"github.com/spf13/cobra"
 )
 

@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
+	"github.com/AVecsi/pq-irmago/internal/common"
 	"github.com/go-errors/errors"
 )
 

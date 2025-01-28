@@ -9,9 +9,8 @@ import (
 
 	"github.com/go-errors/errors"
 
-	"github.com/BeardOfDoom/pq-gabi"
-	irma "github.com/BeardOfDoom/pq-irmago"
-	"github.com/BeardOfDoom/pq-irmago/server"
+	irma "github.com/AVecsi/pq-irmago"
+	"github.com/AVecsi/pq-irmago/server"
 	"github.com/go-redis/redis/v8"
 
 	"github.com/sirupsen/logrus"
@@ -28,7 +27,6 @@ type sessionData struct {
 	ResponseCache      responseCache
 	LastActive         time.Time
 	Result             *server.SessionResult
-	KssProofs          map[irma.SchemeManagerIdentifier]*gabi.ProofP
 	Next               *irma.Qr
 	FrontendAuth       irma.FrontendAuthorization
 	ImplicitDisclosure irma.AttributeConDisCon

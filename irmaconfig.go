@@ -16,15 +16,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/BeardOfDoom/pq-irmago/internal/concmap"
+	"github.com/AVecsi/pq-irmago/internal/concmap"
 	"github.com/go-co-op/gocron"
 
-	"github.com/BeardOfDoom/pq-gabi/gabikeys"
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
+	"github.com/AVecsi/pq-gabi/gabikeys"
+	"github.com/AVecsi/pq-irmago/internal/common"
 
 	"github.com/go-errors/errors"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/sirupsen/logrus"
 )
 
 // Configuration keeps track of schemes, issuers, credential types and public keys,
@@ -57,7 +56,6 @@ type Configuration struct {
 	// Path to the irma_configuration folder that this instance represents
 	Path        string
 	PrivateKeys PrivateKeyRing
-	Revocation  *RevocationStorage `json:"-"`
 	Scheduler   *gocron.Scheduler
 	Warnings    []string `json:"-"`
 
@@ -86,7 +84,6 @@ type ConfigurationOptions struct {
 	IgnorePrivateKeys   bool
 	RevocationDBConnStr string
 	RevocationDBType    string
-	RevocationSettings  RevocationSettings
 }
 
 // NewConfiguration returns a new configuration. After this
@@ -198,18 +195,9 @@ func (conf *Configuration) ParseFolder() (err error) {
 		conf.PrivateKeys.(*privateKeyRingMerge).Add(ring)
 	}
 
-	if conf.Revocation == nil {
+	if conf.Scheduler == nil {
 		conf.Scheduler = gocron.NewScheduler(time.UTC)
 		conf.Scheduler.StartAsync()
-		conf.Revocation = &RevocationStorage{conf: conf}
-		if err = conf.Revocation.Load(
-			Logger.IsLevelEnabled(logrus.DebugLevel),
-			conf.options.RevocationDBType,
-			conf.options.RevocationDBConnStr,
-			conf.options.RevocationSettings,
-		); err != nil {
-			return err
-		}
 	}
 
 	conf.initialized = true
@@ -371,24 +359,6 @@ func (conf *Configuration) ValidateKeys() error {
 			if latest != nil && latest.ExpiryDate > now.Unix() && latest.ExpiryDate < now.Unix()+expiryBoundary {
 				conf.Warnings = append(conf.Warnings, fmt.Sprintf("Latest public key of issuer %s expires soon (at %s)",
 					issuerid.String(), time.Unix(latest.ExpiryDate, 0).String()))
-			}
-		}
-
-		// Check that the current public key supports enough attributes for all credential types
-		// issued by this issuer
-		for id, typ := range conf.CredentialTypes {
-			if id.IssuerIdentifier() != issuerid {
-				continue
-			}
-			if len(typ.AttributeTypes)+2 > len(latest.R) {
-				return errors.Errorf("Latest public key of issuer %s does not support the amount of attributes that credential type %s requires (%d, required: %d)", issuerid.String(), id.String(), len(latest.R), len(typ.AttributeTypes)+2)
-			}
-			pk, err := conf.PublicKeyLatest(typ.IssuerIdentifier())
-			if err != nil {
-				return err
-			}
-			if typ.RevocationSupported() && !pk.RevocationSupported() {
-				return errors.Errorf("credential type %s supports revocation but latest private key of issuer %s does not", typ.Identifier(), issuerid)
 			}
 		}
 	}

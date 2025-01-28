@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/BeardOfDoom/pq-gabi/big"
-	"github.com/BeardOfDoom/pq-gabi/gabikeys"
-	irma "github.com/BeardOfDoom/pq-irmago"
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
+	"github.com/AVecsi/pq-gabi/big"
+	"github.com/AVecsi/pq-gabi/gabikeys"
+	irma "github.com/AVecsi/pq-irmago"
+	"github.com/AVecsi/pq-irmago/internal/common"
 	"github.com/go-errors/errors"
 	"github.com/spf13/cobra"
 )
@@ -83,7 +83,7 @@ func printMetadataAttr(metaint *big.Int, confPath string, confAssetsPath string)
 	fmt.Println("KeyCounter      :", meta.KeyCounter())
 	if key != nil {
 		fmt.Println("KeyExpires      :", time.Unix(key.ExpiryDate, 0))
-		fmt.Println("KeyModulusBitlen:", key.N.BitLen())
+		//fmt.Println("KeyModulusBitlen:", key.N.BitLen())
 	}
 
 	fmt.Println()

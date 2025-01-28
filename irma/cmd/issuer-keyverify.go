@@ -1,18 +1,15 @@
 package cmd
 
+//TODO VADAM
 import (
 	"compress/gzip"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strconv"
 
-	"github.com/BeardOfDoom/pq-gabi/big"
-	"github.com/BeardOfDoom/pq-gabi/gabikeys"
-	"github.com/BeardOfDoom/pq-gabi/keyproof"
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
+	"github.com/AVecsi/pq-irmago/internal/common"
 	"github.com/spf13/cobra"
 )
 
@@ -66,10 +63,10 @@ On machines of 2 - 3 GHz verification will take some 5 - 15 minutes, during whic
 		}
 
 		// Try to read public key
-		pk, err := gabikeys.NewPublicKeyFromFile(pubkeyfile)
-		if err != nil {
-			die("Error reading public key", err)
-		}
+		// pk, err := gabikeys.NewPublicKeyFromFile(pubkeyfile)
+		// if err != nil {
+		// 	die("Error reading public key", err)
+		// }
 
 		// Start log follower
 		follower := startLogFollower()
@@ -92,31 +89,24 @@ On machines of 2 - 3 GHz verification will take some 5 - 15 minutes, during whic
 			die("Error reading proof data", err)
 		}
 		defer closeCloser(proofGzip)
-		proofDecoder := json.NewDecoder(proofGzip)
-		var proof keyproof.ValidKeyProof
-		err = proofDecoder.Decode(&proof)
-		if err != nil {
-			follower.StepDone()
-			die("Error reading proof data", err)
-		}
 		follower.StepDone()
 
 		// Construct proof structure
-		bases := []*big.Int{pk.Z, pk.S}
-		if pk.G != nil {
-			bases = append(bases, pk.G)
-		}
-		if pk.H != nil {
-			bases = append(bases, pk.H)
-		}
-		s := keyproof.NewValidKeyProofStructure(pk.N, append(bases, pk.R...))
+		// bases := []*big.Int{pk.Z, pk.S}
+		// if pk.G != nil {
+		// 	bases = append(bases, pk.G)
+		// }
+		// if pk.H != nil {
+		// 	bases = append(bases, pk.H)
+		// }
+		// s := keyproof.NewValidKeyProofStructure(pk.N, append(bases, pk.R...))
 
 		// And use it to validate the proof
-		if !s.VerifyProof(proof) {
-			die("Proof is invalid!", nil)
-		} else {
-			follower.finalEvents <- setFinalMessage{"Proof is valid"}
-		}
+		// if !s.VerifyProof(proof) {
+		// 	die("Proof is invalid!", nil)
+		// } else {
+		// 	follower.finalEvents <- setFinalMessage{"Proof is valid"}
+		// }
 	},
 }
 

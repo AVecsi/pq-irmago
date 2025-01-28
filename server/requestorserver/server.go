@@ -16,10 +16,10 @@ import (
 	"regexp"
 	"time"
 
-	irma "github.com/BeardOfDoom/pq-irmago"
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
-	"github.com/BeardOfDoom/pq-irmago/server"
-	"github.com/BeardOfDoom/pq-irmago/server/irmaserver"
+	irma "github.com/AVecsi/pq-irmago"
+	"github.com/AVecsi/pq-irmago/internal/common"
+	"github.com/AVecsi/pq-irmago/server"
+	"github.com/AVecsi/pq-irmago/server/irmaserver"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"github.com/golang-jwt/jwt/v4"
@@ -554,11 +554,7 @@ func (s *Server) revoke(w http.ResponseWriter, requestor string, request *irma.R
 		issued = time.Unix(0, request.Issued)
 	}
 	if err := s.irmaserv.Revoke(request.CredentialType, request.Key, issued); err != nil {
-		if err == irma.ErrUnknownRevocationKey {
-			server.WriteError(w, server.ErrorUnknownRevocationKey, "")
-		} else {
-			server.WriteError(w, server.ErrorRevocation, err.Error())
-		}
+		server.WriteError(w, server.ErrorRevocation, err.Error())
 		return
 	}
 	server.WriteString(w, "OK")

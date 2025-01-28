@@ -12,9 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/BeardOfDoom/pq-gabi/gabikeys"
-	irma "github.com/BeardOfDoom/pq-irmago"
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
+	irma "github.com/AVecsi/pq-irmago"
+	"github.com/AVecsi/pq-irmago/internal/common"
 	"github.com/go-co-op/gocron"
 	"github.com/go-errors/errors"
 	"github.com/go-redis/redis/v8"
@@ -45,7 +44,7 @@ type Configuration struct {
 	// ensure (using eg a reverse proxy with TLS enabled) that the attributes are protected in transit.
 	DisableTLS bool `json:"disable_tls" mapstructure:"disable_tls"`
 	// (Optional) email address of server admin, for incidental notifications such as breaking API changes
-	// See https://github.com/BeardOfDoom/pq-irmago/tree/master/server#specifying-an-email-address
+	// See https://github.com/AVecsi/pq-irmago/tree/master/server#specifying-an-email-address
 	// for more information
 	Email string `json:"email" mapstructure:"email"`
 	// Enable server sent events for status updates (experimental; tends to hang when a reverse proxy is used)
@@ -95,8 +94,6 @@ type Configuration struct {
 	RevocationDBConnStr string `json:"revocation_db_str" mapstructure:"revocation_db_str"`
 	// Database type for revocation database, supported: postgres, mysql
 	RevocationDBType string `json:"revocation_db_type" mapstructure:"revocation_db_type"`
-	// Credentials types for which revocation database should be hosted
-	RevocationSettings irma.RevocationSettings `json:"revocation_settings" mapstructure:"revocation_settings"`
 
 	// Production mode: enables safer and stricter defaults and config checking
 	Production bool `json:"production" mapstructure:"production"`
@@ -158,17 +155,11 @@ func (conf *Configuration) Check() error {
 		conf.verifyPrivateKeys,
 		conf.verifyURL,
 		conf.verifyEmail,
-		conf.verifyRevocation,
 		conf.verifyJwtPrivateKey,
 		conf.verifyStaticSessions,
 	} {
 		if err := f(); err != nil {
 			_ = LogError(err)
-			if conf.IrmaConfiguration != nil && conf.IrmaConfiguration.Revocation != nil {
-				if e := conf.IrmaConfiguration.Revocation.Close(); e != nil {
-					_ = LogError(e)
-				}
-			}
 			return err
 		}
 	}
@@ -258,7 +249,6 @@ func (conf *Configuration) verifyIrmaConf() error {
 			Assets:              conf.SchemesAssetsPath,
 			RevocationDBType:    conf.RevocationDBType,
 			RevocationDBConnStr: conf.RevocationDBConnStr,
-			RevocationSettings:  conf.RevocationSettings,
 		})
 		if err != nil {
 			return err
@@ -295,92 +285,6 @@ func (conf *Configuration) verifyPrivateKeys() error {
 		return err
 	}
 	return conf.IrmaConfiguration.AddPrivateKeyRing(ring)
-}
-
-func (conf *Configuration) prepareRevocation(credid irma.CredentialTypeIdentifier) error {
-	var sk *gabikeys.PrivateKey
-	err := conf.IrmaConfiguration.PrivateKeys.Iterate(credid.IssuerIdentifier(), func(isk *gabikeys.PrivateKey) error {
-		if !isk.RevocationSupported() {
-			return nil
-		}
-		sk = isk
-		exists, err := conf.IrmaConfiguration.Revocation.Exists(credid, isk.Counter)
-		if err != nil {
-			return errors.WrapPrefix(err, fmt.Sprintf("failed to check if accumulator exists for %s-%d", credid, isk.Counter), 0)
-		}
-		if !exists {
-			conf.Logger.Warnf("Creating initial accumulator for %s-%d", credid, isk.Counter)
-			if err = conf.IrmaConfiguration.Revocation.EnableRevocation(credid, sk); err != nil {
-				return errors.WrapPrefix(err, fmt.Sprintf("failed create initial accumulator for %s-%d", credid, isk.Counter), 0)
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	if sk == nil {
-		return errors.Errorf("revocation server mode enabled for %s but no private key installed", credid)
-	}
-	return nil
-}
-
-func (conf *Configuration) verifyRevocation() error {
-	rev := conf.IrmaConfiguration.Revocation
-
-	// viper lowercases configuration keys, so we have to un-lowercase them back.
-	for id := range conf.IrmaConfiguration.CredentialTypes {
-		lc := irma.NewCredentialTypeIdentifier(strings.ToLower(id.String()))
-		if lc == id {
-			continue
-		}
-		if s, ok := conf.RevocationSettings[lc]; ok {
-			delete(conf.RevocationSettings, lc)
-			conf.RevocationSettings[id] = s
-		}
-	}
-
-	for credid, settings := range conf.RevocationSettings {
-		if _, known := conf.IrmaConfiguration.CredentialTypes[credid]; !known {
-			return errors.Errorf("unknown credential type %s in revocation settings", credid)
-		}
-		if settings.Authority {
-			conf.Logger.Info("authoritative revocation server mode enabled for " + credid.String())
-			if err := conf.prepareRevocation(credid); err != nil {
-				return err
-			}
-		} else if settings.Server {
-			conf.Logger.Info("revocation server mode enabled for " + credid.String())
-		}
-		if settings.Server {
-			conf.Logger.Info("Being the revocation server for a credential type comes with special responsibilities. Failure can lead to all IRMA apps being unable to disclose credentials of this type. Read more at https://irma.app/docs/revocation/#issuer-responsibilities.")
-		}
-	}
-
-	for credid, credtype := range conf.IrmaConfiguration.CredentialTypes {
-		if !credtype.RevocationSupported() {
-			continue
-		}
-		_, err := rev.Keys.PrivateKeyLatest(credid.IssuerIdentifier())
-		haveSK := err == nil
-		settings := conf.RevocationSettings[credid]
-		if haveSK && (settings == nil || (settings.RevocationServerURL == "" && !settings.Server)) {
-			message := "Revocation-supporting private key installed for %s, but no revocation server is configured: issuance sessions will always fail"
-			if conf.IrmaConfiguration.SchemeManagers[credid.IssuerIdentifier().SchemeManagerIdentifier()].Demo {
-				conf.Logger.Warnf(message, credid)
-			} else {
-				return errors.Errorf(message, credid)
-			}
-		}
-		if settings != nil && settings.RevocationServerURL != "" {
-			url := settings.RevocationServerURL
-			if url[len(url)-1] == '/' {
-				settings.RevocationServerURL = url[:len(url)-1]
-			}
-		}
-	}
-
-	return nil
 }
 
 func (conf *Configuration) verifyURL() error {

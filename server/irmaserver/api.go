@@ -13,10 +13,10 @@ import (
 
 	"github.com/go-co-op/gocron"
 
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
+	"github.com/AVecsi/pq-irmago/internal/common"
 
-	irma "github.com/BeardOfDoom/pq-irmago"
-	"github.com/BeardOfDoom/pq-irmago/server"
+	irma "github.com/AVecsi/pq-irmago"
+	"github.com/AVecsi/pq-irmago/server"
 	"github.com/alexandrevicenzi/go-sse"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-errors/errors"
@@ -53,7 +53,6 @@ func New(conf *server.Configuration) (*Server, error) {
 	if conf.EnableSSE {
 		e = eventServer(conf)
 	}
-	conf.IrmaConfiguration.Revocation.ServerSentEvents = e
 
 	s := &Server{
 		conf:              conf,
@@ -89,20 +88,6 @@ func New(conf *server.Configuration) (*Server, error) {
 		}
 	default:
 		return nil, errors.New("storeType not known")
-	}
-
-	if _, err := s.scheduler.Every(irma.RevocationParameters.RequestorUpdateInterval).Seconds().Do(func() {
-		for credid, settings := range s.conf.RevocationSettings {
-			if settings.Authority {
-				continue
-			}
-			if err := s.conf.IrmaConfiguration.Revocation.SyncIfOld(credid, settings.Tolerance/2); err != nil {
-				s.conf.Logger.Errorf("failed to update revocation database for %s", credid.String())
-				_ = server.LogError(err)
-			}
-		}
-	}); err != nil {
-		return nil, err
 	}
 
 	gocron.SetPanicHandler(server.GocronPanicHandler(s.conf.Logger))
@@ -171,11 +156,6 @@ func (s *Server) HandlerFunc() http.HandlerFunc {
 	r.Route("/revocation/{id}", func(r chi.Router) {
 		r.NotFound(errorWriter(notfound, server.WriteBinaryResponse))
 		r.MethodNotAllowed(errorWriter(notallowed, server.WriteBinaryResponse))
-		r.Get("/events/{counter:\\d+}/{min:\\d+}/{max:\\d+}", s.handleRevocationGetEvents)
-		r.Get("/updateevents", s.handleRevocationUpdateEvents)
-		r.Get("/update/{count:\\d+}", s.handleRevocationGetUpdateLatest)
-		r.Get("/update/{count:\\d+}/{counter:\\d+}", s.handleRevocationGetUpdateLatest)
-		r.Post("/issuancerecord/{counter:\\d+}", s.handleRevocationPostIssuanceRecord)
 	})
 
 	return s.router.ServeHTTP
@@ -186,9 +166,6 @@ func Stop() {
 	s.Stop()
 }
 func (s *Server) Stop() {
-	if err := s.conf.IrmaConfiguration.Revocation.Close(); err != nil {
-		_ = server.LogWarning(err)
-	}
 	s.scheduler.Stop()
 	s.sessions.stop()
 }
@@ -384,7 +361,7 @@ func Revoke(credid irma.CredentialTypeIdentifier, key string, issued time.Time) 
 	return s.Revoke(credid, key, issued)
 }
 func (s *Server) Revoke(credid irma.CredentialTypeIdentifier, key string, issued time.Time) error {
-	return s.conf.IrmaConfiguration.Revocation.Revoke(credid, key, issued)
+	return nil
 }
 
 // SubscribeServerSentEvents subscribes the HTTP client to server sent events on status updates

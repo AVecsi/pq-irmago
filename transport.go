@@ -15,16 +15,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/BeardOfDoom/pq-gabi"
-	"github.com/BeardOfDoom/pq-gabi/revocation"
+	gabi "github.com/AVecsi/pq-gabi"
 	"github.com/go-errors/errors"
 	"github.com/hashicorp/go-retryablehttp"
 	sseclient "github.com/sietseringers/go-sse"
 	"github.com/sirupsen/logrus"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
-	"github.com/BeardOfDoom/pq-irmago/internal/disable_sigpipe"
+	"github.com/AVecsi/pq-irmago/internal/common"
+	"github.com/AVecsi/pq-irmago/internal/disable_sigpipe"
 )
 
 const responseDeadline = 10 * time.Second
@@ -61,7 +60,7 @@ func SetLogger(logger *logrus.Logger) {
 	Logger = logger
 	gabi.Logger = Logger
 	common.Logger = Logger
-	revocation.Logger = Logger
+	//revocation.Logger = Logger
 	sseclient.Logger = log.New(Logger.WithField("type", "sseclient").WriterLevel(logrus.TraceLevel), "", 0)
 }
 
@@ -362,5 +361,5 @@ func (p httpPublicSuffixList) PublicSuffix(domain string) string {
 }
 
 func (p httpPublicSuffixList) String() string {
-	return "github.com/BeardOfDoom/pq-irmago/httpPublicSuffixList-v1"
+	return "github.com/AVecsi/pq-irmago/httpPublicSuffixList-v1"
 }

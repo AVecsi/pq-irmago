@@ -17,9 +17,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/BeardOfDoom/pq-gabi/gabikeys"
-	"github.com/BeardOfDoom/pq-gabi/signed"
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
+	"github.com/AVecsi/pq-gabi/gabikeys"
+	"github.com/AVecsi/pq-gabi/signed"
+	"github.com/AVecsi/pq-irmago/internal/common"
 	"github.com/sirupsen/logrus"
 
 	"github.com/go-errors/errors"
@@ -157,6 +157,7 @@ func (conf *Configuration) AutoUpdateSchemes(interval int) error {
 			}
 		}
 	}
+	fmt.Println(conf.Scheduler)
 	_, err := conf.Scheduler.Every(interval).Minutes().Do(update)
 	if err != nil {
 		return err
@@ -1244,12 +1245,12 @@ func (scheme *SchemeManager) parseCredentialsFolder(conf *Configuration, issuer 
 			return err
 		}
 		foundcred = true
-		if cred.RevocationUpdateCount == 0 {
-			cred.RevocationUpdateCount = RevocationParameters.DefaultUpdateEventCount
-		}
-		if cred.RevocationUpdateSpeed == 0 {
-			cred.RevocationUpdateSpeed = RevocationParameters.ClientDefaultUpdateSpeed
-		}
+		// if cred.RevocationUpdateCount == 0 {
+		// 	cred.RevocationUpdateCount = RevocationParameters.DefaultUpdateEventCount
+		// }
+		// if cred.RevocationUpdateSpeed == 0 {
+		// 	cred.RevocationUpdateSpeed = RevocationParameters.ClientDefaultUpdateSpeed
+		// }
 		for i, url := range cred.RevocationServers {
 			if url[len(url)-1] == '/' {
 				cred.RevocationServers[i] = url[:len(url)-1]

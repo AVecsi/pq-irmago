@@ -13,18 +13,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/BeardOfDoom/pq-gabi"
-	"github.com/BeardOfDoom/pq-gabi/big"
-	"github.com/BeardOfDoom/pq-gabi/gabikeys"
-	"github.com/BeardOfDoom/pq-gabi/revocation"
-	irma "github.com/BeardOfDoom/pq-irmago"
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
-	"github.com/BeardOfDoom/pq-irmago/server"
+	gabi "github.com/AVecsi/pq-gabi"
+	"github.com/AVecsi/pq-gabi/big"
+	"github.com/AVecsi/pq-gabi/gabikeys"
+	irma "github.com/AVecsi/pq-irmago"
+	"github.com/AVecsi/pq-irmago/internal/common"
+	"github.com/AVecsi/pq-irmago/server"
 	"github.com/alexandrevicenzi/go-sse"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-errors/errors"
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/sirupsen/logrus"
 )
 
@@ -146,85 +144,23 @@ func (session *sessionData) checkCache(endpoint string, message []byte) (int, []
 	return session.ResponseCache.Status, session.ResponseCache.Response
 }
 
-// Issuance helpers
-
-func (session *sessionData) computeWitness(sk *gabikeys.PrivateKey, cred *irma.CredentialRequest, conf *server.Configuration) (*revocation.Witness, error) {
-	id := cred.CredentialTypeID
-	credtyp := conf.IrmaConfiguration.CredentialTypes[id]
-	if !credtyp.RevocationSupported() || !session.Rrequest.SessionRequest().Base().RevocationSupported() {
-		return nil, nil
-	}
-
-	// ensure the client always gets an up to date nonrevocation witness
-	rs := conf.IrmaConfiguration.Revocation
-	if err := rs.SyncDB(id); err != nil {
-		return nil, err
-	}
-
-	// Fetch latest revocation record, and then extract the current value of the accumulator
-	// from it to generate the witness from
-	updates, err := rs.LatestUpdates(id, 0, &cred.KeyCounter)
-	if err != nil {
-		return nil, err
-	}
-	u := updates[cred.KeyCounter]
-	if u == nil {
-		return nil, errors.Errorf("no revocation updates found for key %d", cred.KeyCounter)
-	}
-	sig := u.SignedAccumulator
-	pk, err := rs.Keys.PublicKey(id.IssuerIdentifier(), sig.PKCounter)
-	if err != nil {
-		return nil, err
-	}
-	acc, err := sig.UnmarshalVerify(pk)
-	if err != nil {
-		return nil, err
-	}
-
-	witness, err := revocation.RandomWitness(sk, acc)
-	if err != nil {
-		return nil, err
-	}
-	witness.SignedAccumulator = sig // attach previously selected reocation record to the witness for the client
-
-	return witness, nil
-}
-
 func (session *sessionData) computeAttributes(
 	sk *gabikeys.PrivateKey, cred *irma.CredentialRequest, conf *server.Configuration,
-) ([]*big.Int, *revocation.Witness, error) {
-	id := cred.CredentialTypeID
-	witness, err := session.computeWitness(sk, cred, conf)
-	if err != nil {
-		return nil, nil, err
-	}
-	var nonrevAttr *big.Int
-	if witness != nil {
-		nonrevAttr = witness.E
-	}
+) ([]*gabi.Attribute, error) {
 
 	issuedAt := time.Now()
-	attributes, err := cred.AttributeList(conf.IrmaConfiguration, 0x03, nonrevAttr, issuedAt)
+	attributes, err := cred.AttributeList(conf.IrmaConfiguration, 0x03, issuedAt)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	if witness != nil {
-		issrecord := &irma.IssuanceRecord{
-			CredType:   id,
-			PKCounter:  &sk.Counter,
-			Key:        cred.RevocationKey,
-			Attr:       (*irma.RevocationAttribute)(nonrevAttr),
-			Issued:     issuedAt.UnixNano(),
-			ValidUntil: attributes.Expiry().UnixNano(),
-		}
-		err = conf.IrmaConfiguration.Revocation.SaveIssuanceRecord(id, issrecord, sk)
-		if err != nil {
-			return nil, nil, err
-		}
+	gabiAttributes := make([]*gabi.Attribute, len(attributes.Ints))
+
+	for i := range attributes.Ints {
+		gabiAttributes[i].Value = attributes.Ints[i].Bytes()
 	}
 
-	return attributes.Ints, witness, nil
+	return gabiAttributes, nil
 }
 
 func (s *Server) validateIssuanceRequest(request *irma.IssuanceRequest) error {
@@ -252,10 +188,6 @@ func (s *Server) validateIssuanceRequest(request *irma.IssuanceRequest) error {
 		cred.KeyCounter = privatekey.Counter
 
 		if s.conf.IrmaConfiguration.CredentialTypes[cred.CredentialTypeID].RevocationSupported() {
-			settings := s.conf.RevocationSettings[cred.CredentialTypeID]
-			if settings == nil || (settings.RevocationServerURL == "" && !settings.Server) {
-				return errors.Errorf("revocation enabled for %s but no revocation server configured", cred.CredentialTypeID)
-			}
 			if cred.RevocationKey == "" {
 				return errors.Errorf("revocation enabled for %s but no revocationKey specified", cred.CredentialTypeID)
 			}
@@ -277,34 +209,6 @@ func (s *Server) validateIssuanceRequest(request *irma.IssuanceRequest) error {
 	}
 
 	return nil
-}
-
-func (session *sessionData) getProofP(commitments *irma.IssueCommitmentMessage, scheme irma.SchemeManagerIdentifier, conf *server.Configuration) (*gabi.ProofP, error) {
-	if session.KssProofs == nil {
-		session.KssProofs = make(map[irma.SchemeManagerIdentifier]*gabi.ProofP)
-	}
-
-	if _, contains := session.KssProofs[scheme]; !contains {
-		str, contains := commitments.ProofPjwts[scheme.Name()]
-		if !contains {
-			return nil, errors.Errorf("no keyshare proof included for scheme %s", scheme.Name())
-		}
-		conf.Logger.Trace("Parsing keyshare ProofP JWT: ", str)
-		claims := &struct {
-			jwt.StandardClaims
-			ProofP *gabi.ProofP
-		}{}
-		token, err := jwt.ParseWithClaims(str, claims, conf.IrmaConfiguration.KeyshareServerKeyFunc(scheme))
-		if err != nil {
-			return nil, err
-		}
-		if !token.Valid {
-			return nil, errors.Errorf("invalid keyshare proof included for scheme %s", scheme.Name())
-		}
-		session.KssProofs[scheme] = claims.ProofP
-	}
-
-	return session.KssProofs[scheme], nil
 }
 
 func (session *sessionData) getClientRequest() (*irma.ClientSessionRequest, error) {

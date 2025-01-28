@@ -7,14 +7,15 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"github.com/BeardOfDoom/pq-gabi/big"
-	"github.com/go-errors/errors"
-	"github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/AVecsi/pq-gabi/big"
+	"github.com/go-errors/errors"
+	"github.com/sirupsen/logrus"
 )
 
 var Logger *logrus.Logger

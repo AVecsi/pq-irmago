@@ -5,9 +5,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	irma "github.com/BeardOfDoom/pq-irmago"
-	"github.com/BeardOfDoom/pq-irmago/server"
-	"github.com/BeardOfDoom/pq-irmago/server/requestorserver"
+	irma "github.com/AVecsi/pq-irmago"
+	"github.com/AVecsi/pq-irmago/server"
+	"github.com/AVecsi/pq-irmago/server/requestorserver"
 	"github.com/go-errors/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -237,14 +237,6 @@ func configureServer(cmd *cobra.Command) (*requestorserver.Configuration, error)
 	if err := handleMapOrString("static_sessions", &conf.StaticSessions); err != nil {
 		return nil, err
 	}
-	var m map[string]*irma.RevocationSetting
-	if err = handleMapOrString("revocation_settings", &m); err != nil {
-		return nil, err
-	}
-	for i, s := range m {
-		conf.RevocationSettings[irma.NewCredentialTypeIdentifier(i)] = s
-	}
-
 	logger.Debug("Done configuring")
 
 	return conf, nil

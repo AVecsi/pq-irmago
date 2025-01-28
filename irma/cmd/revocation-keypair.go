@@ -1,7 +1,8 @@
 package cmd
 
+//TODO VADAM
 import (
-	"github.com/BeardOfDoom/pq-gabi/gabikeys"
+	"github.com/AVecsi/pq-gabi/gabikeys"
 	"github.com/spf13/cobra"
 )
 
@@ -17,21 +18,21 @@ This is required before credential types requiring revocation can be issued unde
 		if err != nil {
 			die("failed to read private key", err)
 		}
-		if sk.RevocationSupported() {
-			die("private key already supports revocation", nil)
-		}
+		// if sk.RevocationSupported() {
+		// 	die("private key already supports revocation", nil)
+		// }
 
 		pk, err := gabikeys.NewPublicKeyFromFile(args[1])
 		if err != nil {
 			die("failed to read public key", err)
 		}
-		if pk.RevocationSupported() {
-			die("public key already supports revocation", nil)
-		}
+		// if pk.RevocationSupported() {
+		// 	die("public key already supports revocation", nil)
+		// }
 
-		if err = gabikeys.GenerateRevocationKeypair(sk, pk); err != nil {
-			die("failed to generate revocation keys", err)
-		}
+		// if err = gabikeys.GenerateRevocationKeypair(sk, pk); err != nil {
+		// 	die("failed to generate revocation keys", err)
+		// }
 
 		if _, err = sk.WriteToFile(args[0], true); err != nil {
 			die("failed to write private key", err)

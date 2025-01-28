@@ -1,8 +1,8 @@
 package cmd
 
+//TODO VADAM
 import (
 	"compress/gzip"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,10 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/BeardOfDoom/pq-gabi/big"
-	"github.com/BeardOfDoom/pq-gabi/gabikeys"
-	"github.com/BeardOfDoom/pq-gabi/keyproof"
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
+	"github.com/AVecsi/pq-irmago/internal/common"
 	"github.com/spf13/cobra"
 )
 
@@ -70,26 +67,26 @@ may be used.`,
 		}
 
 		// Try to read public key
-		pk, err := gabikeys.NewPublicKeyFromFile(pubkeyfile)
-		if err != nil {
-			die("Could not read public key", err)
-		}
+		// pk, err := gabikeys.NewPublicKeyFromFile(pubkeyfile)
+		// if err != nil {
+		// 	die("Could not read public key", err)
+		// }
 
-		// Try to read private key
-		sk, err := gabikeys.NewPrivateKeyFromFile(privkeyfile, false)
-		if err != nil {
-			die("Could not read private key", err)
-		}
+		// // Try to read private key
+		// sk, err := gabikeys.NewPrivateKeyFromFile(privkeyfile, false)
+		// if err != nil {
+		// 	die("Could not read private key", err)
+		// }
 
 		// Validate that they match
-		if pk.N.Cmp(new(big.Int).Mul(sk.P, sk.Q)) != 0 {
-			die("Private and public key do not match", nil)
-		}
+		// if pk.N.Cmp(new(big.Int).Mul(sk.P, sk.Q)) != 0 {
+		// 	die("Private and public key do not match", nil)
+		// }
 
-		// Validate that the key is eligble to proving
-		if !keyproof.CanProve(sk.PPrime, sk.QPrime) {
-			die("Private key not eligible to proving", nil)
-		}
+		// // Validate that the key is eligble to proving
+		// if !keyproof.CanProve(sk.PPrime, sk.QPrime) {
+		// 	die("Private key not eligible to proving", nil)
+		// }
 
 		// Prepare storage for proof if needed
 		if prooffile == "" {
@@ -119,20 +116,20 @@ may be used.`,
 		}()
 
 		// Build the proof
-		bases := []*big.Int{pk.Z, pk.S}
-		if pk.G != nil {
-			bases = append(bases, pk.G)
-		}
-		if pk.H != nil {
-			bases = append(bases, pk.H)
-		}
-		s := keyproof.NewValidKeyProofStructure(pk.N, append(bases, pk.R...))
-		proof := s.BuildProof(sk.PPrime, sk.QPrime)
+		// bases := []*big.Int{pk.Z, pk.S}
+		// if pk.G != nil {
+		// 	bases = append(bases, pk.G)
+		// }
+		// if pk.H != nil {
+		// 	bases = append(bases, pk.H)
+		// }
+		// s := keyproof.NewValidKeyProofStructure(pk.N, append(bases, pk.R...))
+		// proof := s.BuildProof(sk.PPrime, sk.QPrime)
 
 		// And write it to file
 		follower.StepStart("Writing proof", 0)
-		proofEncoder := json.NewEncoder(proofWriter)
-		err = proofEncoder.Encode(proof)
+		//proofEncoder := json.NewEncoder(proofWriter)
+		//err = proofEncoder.Encode(proof)
 		follower.StepDone()
 		if err != nil {
 			die("Could not write proof", err)
@@ -283,8 +280,6 @@ func startLogFollower() *logFollower {
 			}
 		}
 	}()
-
-	keyproof.Follower = result
 
 	return result
 }

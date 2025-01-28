@@ -8,9 +8,8 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/BeardOfDoom/pq-gabi/big"
-	"github.com/BeardOfDoom/pq-gabi/gabikeys"
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
+	"github.com/AVecsi/pq-gabi/gabikeys"
+	"github.com/AVecsi/pq-irmago/internal/common"
 	"github.com/go-errors/errors"
 )
 
@@ -291,17 +290,6 @@ func validatePrivateKey(issuerid IssuerIdentifier, sk *gabikeys.PrivateKey, conf
 	}
 	if pk == nil {
 		return errors.Errorf("Private key %d of issuer %s has no corresponding public key", sk.Counter, issuerid.String())
-	}
-	if new(big.Int).Mul(sk.P, sk.Q).Cmp(pk.N) != 0 {
-		return errors.Errorf("Private key %d of issuer %s does not belong to corresponding public key", sk.Counter, issuerid.String())
-	}
-	if sk.RevocationSupported() != pk.RevocationSupported() {
-		msg := fmt.Sprintf("revocation support of private key %d of issuer %s is not consistent with corresponding public key", sk.Counter, issuerid.String())
-		if conf.SchemeManagers[issuerid.SchemeManagerIdentifier()].Demo {
-			Logger.Warn(msg)
-		} else {
-			return errors.Errorf(msg)
-		}
 	}
 	return nil
 }

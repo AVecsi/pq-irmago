@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	irma "github.com/BeardOfDoom/pq-irmago"
+	irma "github.com/AVecsi/pq-irmago"
 	"github.com/bwesterb/go-atum"
 	"github.com/go-errors/errors"
 )

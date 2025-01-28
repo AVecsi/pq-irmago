@@ -1,8 +1,8 @@
 package irmaclient
 
 import (
-	"github.com/BeardOfDoom/pq-gabi"
-	"github.com/BeardOfDoom/pq-irmago"
+	gabi "github.com/AVecsi/pq-gabi"
+	irma "github.com/AVecsi/pq-irmago"
 )
 
 // credential represents an IRMA credential, whose zeroth attribute

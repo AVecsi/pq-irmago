@@ -8,11 +8,11 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/BeardOfDoom/pq-gabi/signed"
-	irma "github.com/BeardOfDoom/pq-irmago"
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
-	"github.com/BeardOfDoom/pq-irmago/internal/test"
-	"github.com/BeardOfDoom/pq-irmago/irmaclient"
+	"github.com/AVecsi/pq-gabi/signed"
+	irma "github.com/AVecsi/pq-irmago"
+	"github.com/AVecsi/pq-irmago/internal/common"
+	"github.com/AVecsi/pq-irmago/internal/test"
+	"github.com/AVecsi/pq-irmago/irmaclient"
 	"github.com/stretchr/testify/require"
 )
 

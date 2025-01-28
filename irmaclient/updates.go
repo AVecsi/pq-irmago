@@ -2,11 +2,12 @@ package irmaclient
 
 import (
 	"encoding/json"
-	"github.com/BeardOfDoom/pq-gabi"
-	"go.etcd.io/bbolt"
 	"time"
 
-	irma "github.com/BeardOfDoom/pq-irmago"
+	gabi "github.com/AVecsi/pq-gabi"
+	"go.etcd.io/bbolt"
+
+	irma "github.com/AVecsi/pq-irmago"
 )
 
 // This file contains the update mechanism for Client

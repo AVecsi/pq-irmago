@@ -8,9 +8,9 @@ import (
 	"slices"
 	"strings"
 
-	irma "github.com/BeardOfDoom/pq-irmago"
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
-	"github.com/BeardOfDoom/pq-irmago/server"
+	irma "github.com/AVecsi/pq-irmago"
+	"github.com/AVecsi/pq-irmago/internal/common"
+	"github.com/AVecsi/pq-irmago/server"
 	"github.com/go-errors/errors"
 )
 
@@ -184,10 +184,6 @@ func (conf *Configuration) CanRevoke(requestor string, cred irma.CredentialTypeI
 	if len(permissions) == 0 { // requestor is not present in the permissions
 		return false, ""
 	}
-	_, err := conf.IrmaConfiguration.Revocation.Keys.PrivateKeyLatest(cred.IssuerIdentifier())
-	if err != nil {
-		return false, err.Error()
-	}
 	if slices.Contains(permissions, "*") ||
 		slices.Contains(permissions, cred.Root()+".*") ||
 		slices.Contains(permissions, cred.IssuerIdentifier().String()+".*") ||
@@ -211,15 +207,6 @@ func (conf *Configuration) initialize() error {
 		}
 	} else {
 		if len(conf.Requestors) == 0 {
-			revServer := false
-			for _, s := range conf.RevocationSettings {
-				if s.Server {
-					revServer = true
-				}
-			}
-			if !revServer {
-				return errors.New("No requestors configured; either configure one or more requestors or disable requestor authentication")
-			}
 		}
 		authenticators = map[AuthenticationMethod]Authenticator{
 			AuthenticationMethodHmac:      &HmacAuthenticator{hmackeys: map[string]interface{}{}, maxRequestAge: conf.MaxRequestAge},
@@ -395,12 +382,6 @@ func (conf *Configuration) validatePermissionSet(requestor string, requestorperm
 					if sk == nil {
 						errs = append(errs, fmt.Sprintf("%s %s permission '%s': private key not installed", requestor, typ, permission))
 						continue
-					}
-					if typ == "revoking" {
-						if ok := sk.RevocationSupported(); !ok {
-							errs = append(errs, fmt.Sprintf("%s %s permission '%s': private key does not support revocation (add revocation key material to it using \"irma issuer revocation keypair\")", requestor, typ, permission))
-							continue
-						}
 					}
 				}
 			}

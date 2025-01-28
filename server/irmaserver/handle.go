@@ -3,17 +3,14 @@ package irmaserver
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"time"
 
-	"github.com/BeardOfDoom/pq-gabi"
-	"github.com/BeardOfDoom/pq-gabi/signed"
-	irma "github.com/BeardOfDoom/pq-irmago"
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
-	"github.com/BeardOfDoom/pq-irmago/server"
+	gabi "github.com/AVecsi/pq-gabi"
+	irma "github.com/AVecsi/pq-irmago"
+	"github.com/AVecsi/pq-irmago/internal/common"
+	"github.com/AVecsi/pq-irmago/server"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-errors/errors"
@@ -59,9 +56,6 @@ func (session *sessionData) handleGetClientRequest(min, max *irma.ProtocolVersio
 	// we include the latest revocation updates for the client here, as opposed to when the session
 	// was started, so that the client always gets the very latest revocation records
 	sessionRequest := session.Rrequest.SessionRequest()
-	if err = conf.IrmaConfiguration.Revocation.SetRevocationUpdates(sessionRequest.Base()); err != nil {
-		return nil, session.fail(server.ErrorRevocation, err.Error(), conf)
-	}
 
 	// Handle legacy clients that do not support condiscon, by attempting to convert the condiscon
 	// session request to the legacy session request format
@@ -159,14 +153,15 @@ func (session *sessionData) handlePostCommitments(commitments *irma.IssueCommitm
 	session.markAlive(conf)
 	request := session.Rrequest.SessionRequest().(*irma.IssuanceRequest)
 
-	discloseCount := len(commitments.Proofs) - len(request.Credentials)
+	discloseCount := len(commitments.Proofs.CredentialDisclosures) - len(request.Credentials)
 	if discloseCount < 0 {
 		return nil, session.fail(server.ErrorMalformedInput, "Received insufficient proofs", conf)
 	}
 
 	// Compute list of public keys against which to verify the received proofs
-	disclosureproofs := irma.ProofList(commitments.Proofs[:discloseCount])
+	disclosureproofs := irma.ProofList(*commitments.Proofs)
 	pubkeys, err := disclosureproofs.ExtractPublicKeys(conf.IrmaConfiguration)
+	pubkeys = pubkeys[:discloseCount]
 	if err != nil {
 		return nil, session.fail(server.ErrorMalformedInput, err.Error(), conf)
 	}
@@ -174,19 +169,6 @@ func (session *sessionData) handlePostCommitments(commitments *irma.IssueCommitm
 		iss := cred.CredentialTypeID.IssuerIdentifier()
 		pubkey, _ := conf.IrmaConfiguration.PublicKey(iss, cred.KeyCounter) // No error, already checked earlier
 		pubkeys = append(pubkeys, pubkey)
-	}
-
-	// Verify and merge keyshare server proofs, if any
-	for i, proof := range commitments.Proofs {
-		pubkey := pubkeys[i]
-		schemeid := irma.NewIssuerIdentifier(pubkey.Issuer).SchemeManagerIdentifier()
-		if conf.IrmaConfiguration.SchemeManagers[schemeid].Distributed() {
-			proofP, err := session.getProofP(commitments, schemeid, conf)
-			if err != nil {
-				return nil, session.fail(server.ErrorKeyshareProofMissing, err.Error(), conf)
-			}
-			proof.MergeProofP(proofP, pubkey)
-		}
 	}
 
 	// Verify all proofs and check disclosed attributes, if any, against request
@@ -210,26 +192,27 @@ func (session *sessionData) handlePostCommitments(commitments *irma.IssueCommitm
 	}
 
 	// Compute CL signatures
-	var sigs []*gabi.IssueSignatureMessage
+	var sigs []*gabi.Credential
 	for i, cred := range request.Credentials {
 		id := cred.CredentialTypeID.IssuerIdentifier()
 		pk, _ := conf.IrmaConfiguration.PublicKey(id, cred.KeyCounter)
 		sk, _ := conf.IrmaConfiguration.PrivateKeys.Latest(id)
 		issuer := gabi.NewIssuer(sk, pk, one)
-		proof, ok := commitments.Proofs[i+discloseCount].(*gabi.ProofU)
-		if !ok {
-			return nil, session.fail(server.ErrorMalformedInput, "Received invalid issuance commitment", conf)
-		}
-		attrs, witness, err := session.computeAttributes(sk, cred, conf)
+		proof := commitments.Proofs.CredentialDisclosures[i+discloseCount].DisclosedAttributes[0].IntValue()
+		attrs, err := session.computeAttributes(sk, cred, conf)
 		if err != nil {
 			return nil, session.fail(server.ErrorIssuanceFailed, err.Error(), conf)
 		}
-		rb := conf.IrmaConfiguration.CredentialTypes[cred.CredentialTypeID].RandomBlindAttributeIndices()
-		sig, err := issuer.IssueSignature(proof.U, attrs, witness, commitments.Nonce2, rb)
+		//rb := conf.IrmaConfiguration.CredentialTypes[cred.CredentialTypeID].RandomBlindAttributeIndices()
+		sig, attrTreeRoot, err := issuer.IssueSignature(proof, attrs)
 		if err != nil {
 			return nil, session.fail(server.ErrorIssuanceFailed, err.Error(), conf)
 		}
-		sigs = append(sigs, sig)
+		sigs = append(sigs, &gabi.Credential{
+			Signature:    sig,
+			Attributes:   attrs,
+			AttrTreeRoot: attrTreeRoot},
+		)
 	}
 
 	return &irma.ServerSessionResponse{
@@ -507,114 +490,4 @@ func (s *Server) handleStaticMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	server.WriteResponse(w, qr, nil)
-}
-
-// GET revocation/events/{credtype}/{pkcounter}/{min}/{max}
-func (s *Server) handleRevocationGetEvents(w http.ResponseWriter, r *http.Request) {
-	cred := irma.NewCredentialTypeIdentifier(chi.URLParam(r, "id"))
-	pkcounter, _ := strconv.ParseUint(chi.URLParam(r, "counter"), 10, 32)
-	min, _ := strconv.ParseUint(chi.URLParam(r, "min"), 10, 64)
-	max, _ := strconv.ParseUint(chi.URLParam(r, "max"), 10, 64)
-
-	if settings := s.conf.RevocationSettings[cred]; settings == nil || !settings.Server {
-		server.WriteBinaryResponse(w, nil, server.RemoteError(server.ErrorInvalidRequest, "not supported by this server"))
-		return
-	}
-	events, err := s.conf.IrmaConfiguration.Revocation.Events(cred, uint(pkcounter), min, max)
-	if err != nil {
-		server.WriteBinaryResponse(w, nil, server.RemoteError(server.ErrorRevocation, err.Error()))
-		return
-	}
-	w.Header().Set("Cache-Control", fmt.Sprintf("max-age=%d", irma.RevocationParameters.EventsCacheMaxAge))
-	server.WriteBinaryResponse(w, events, nil)
-}
-
-func (s *Server) handleRevocationUpdateEvents(w http.ResponseWriter, r *http.Request) {
-	if !s.conf.EnableSSE {
-		server.WriteBinaryResponse(w, nil, server.RemoteError(server.ErrorInvalidRequest, "not supported by this server"))
-		return
-	}
-	id := chi.URLParam(r, "id")
-	if id != "" {
-		r = r.WithContext(context.WithValue(r.Context(), "sse", common.SSECtx{
-			Component: server.ComponentRevocation,
-			Arg:       id,
-		}))
-	}
-	s.serverSentEvents.ServeHTTP(w, r)
-}
-
-// GET revocation/update/{credtype}/{count}[/{pkcounter}]
-func (s *Server) handleRevocationGetUpdateLatest(w http.ResponseWriter, r *http.Request) {
-	cred := irma.NewCredentialTypeIdentifier(chi.URLParam(r, "id")) // id
-	count, _ := strconv.ParseUint(chi.URLParam(r, "count"), 10, 64) // count
-	c := chi.URLParam(r, "counter")
-	var counter *uint
-	if c != "" {
-		j, _ := strconv.ParseUint(chi.URLParam(r, "counter"), 10, 32) // counter
-		k := uint(j)
-		counter = &k
-	}
-
-	if settings := s.conf.RevocationSettings[cred]; settings == nil || !settings.Server {
-		server.WriteBinaryResponse(w, nil, server.RemoteError(server.ErrorInvalidRequest, "not supported by this server"))
-		return
-	}
-	updates, err := s.conf.IrmaConfiguration.Revocation.LatestUpdates(cred, count, counter)
-	if err != nil {
-		server.WriteBinaryResponse(w, nil, server.RemoteError(server.ErrorRevocation, err.Error()))
-		return
-	}
-	var mintime int64
-	for _, u := range updates {
-		if u.SignedAccumulator.Accumulator.Time < mintime || mintime == 0 {
-			mintime = u.SignedAccumulator.Accumulator.Time
-		}
-	}
-	maxage := mintime + int64(irma.RevocationParameters.AccumulatorUpdateInterval) - time.Now().Unix()
-	w.Header().Set("Cache-Control", fmt.Sprintf("max-age=%d", maxage))
-	if counter == nil {
-		server.WriteBinaryResponse(w, updates, nil)
-	} else {
-		server.WriteBinaryResponse(w, updates[*counter], nil)
-	}
-}
-
-// POST revocation/issuancerecord/{credtype}/{counter}
-func (s *Server) handleRevocationPostIssuanceRecord(w http.ResponseWriter, r *http.Request) {
-	defer common.Close(r.Body)
-	cred := irma.NewCredentialTypeIdentifier(chi.URLParam(r, "id"))
-	counter, _ := strconv.ParseUint(chi.URLParam(r, "counter"), 10, 32)
-
-	if settings := s.conf.RevocationSettings[cred]; settings == nil || !settings.Authority {
-		server.WriteBinaryResponse(w, nil, server.RemoteError(server.ErrorInvalidRequest, "not supported by this server"))
-		return
-	}
-
-	// Grab the counter-th issuer public key, with which the message should be signed,
-	// and verify and unmarshal the issuance record
-	pk, err := s.conf.IrmaConfiguration.Revocation.Keys.PublicKey(cred.IssuerIdentifier(), uint(counter))
-	if err != nil {
-		server.WriteBinaryResponse(w, nil, server.RemoteError(server.ErrorRevocation, err.Error()))
-		return
-	}
-	var rec irma.IssuanceRecord
-	message, err := io.ReadAll(r.Body)
-	if err != nil {
-		server.WriteBinaryResponse(w, nil, server.RemoteError(server.ErrorInvalidRequest, err.Error()))
-		return
-	}
-	if err := signed.UnmarshalVerify(pk.ECDSA, message, &rec); err != nil {
-		server.WriteBinaryResponse(w, nil, server.RemoteError(server.ErrorUnauthorized, err.Error()))
-		return
-	}
-	if rec.CredType != cred {
-		server.WriteBinaryResponse(w, nil, server.RemoteError(server.ErrorInvalidRequest, "issuance record of wrong credential type"))
-		return
-	}
-
-	if err = s.conf.IrmaConfiguration.Revocation.AddIssuanceRecord(&rec); err != nil {
-		server.WriteBinaryResponse(w, nil, server.RemoteError(server.ErrorRevocation, err.Error()))
-	}
-	w.WriteHeader(200)
 }

@@ -5,10 +5,9 @@ import (
 	"slices"
 	"time"
 
-	"github.com/BeardOfDoom/pq-gabi"
-	"github.com/BeardOfDoom/pq-gabi/big"
-	"github.com/BeardOfDoom/pq-gabi/gabikeys"
-	"github.com/BeardOfDoom/pq-gabi/revocation"
+	gabi "github.com/AVecsi/pq-gabi"
+	"github.com/AVecsi/pq-gabi/big"
+	"github.com/AVecsi/pq-gabi/gabikeys"
 	"github.com/go-errors/errors"
 	"github.com/golang-jwt/jwt/v4"
 )
@@ -44,7 +43,7 @@ type DisclosedAttribute struct {
 }
 
 // ProofList is a gabi.ProofList with some extra methods.
-type ProofList gabi.ProofList
+type ProofList gabi.DisclosureProof
 
 var ErrMissingPublicKey = errors.New("Missing public key")
 
@@ -52,22 +51,18 @@ var ErrMissingPublicKey = errors.New("Missing public key")
 // for later use in verification of the proofList. If one of the proofs is not a ProofD
 // an error is returned.
 func (pl ProofList) ExtractPublicKeys(configuration *Configuration) ([]*gabikeys.PublicKey, error) {
-	var publicKeys = make([]*gabikeys.PublicKey, 0, len(pl))
+	var publicKeys = make([]*gabikeys.PublicKey, 0, len(pl.CredentialDisclosures))
 
-	for _, v := range pl {
-		if proof, ok := v.(*gabi.ProofD); ok {
-			metadata := MetadataFromInt(proof.ADisclosed[1], configuration) // index 1 is metadata attribute
-			publicKey, err := metadata.PublicKey()
-			if err != nil {
-				return nil, err
-			}
-			if publicKey == nil {
-				return nil, ErrMissingPublicKey
-			}
-			publicKeys = append(publicKeys, publicKey)
-		} else {
-			return nil, errors.New("Cannot extract public key, not a disclosure proofD")
+	for _, v := range pl.CredentialDisclosures {
+		metadata := MetadataFromInt(v.DisclosedAttributes[1].IntValue(), configuration) // index 1 is metadata attribute
+		publicKey, err := metadata.PublicKey()
+		if err != nil {
+			return nil, err
 		}
+		if publicKey == nil {
+			return nil, ErrMissingPublicKey
+		}
+		publicKeys = append(publicKeys, publicKey)
 	}
 	return publicKeys, nil
 }
@@ -79,13 +74,9 @@ func (pl ProofList) Expired(configuration *Configuration, t *time.Time, skipExpi
 		temp := time.Now()
 		t = &temp
 	}
-	for _, proof := range pl {
-		proofd, ok := proof.(*gabi.ProofD)
-		if !ok {
-			continue
-		}
+	for _, proof := range pl.CredentialDisclosures {
 
-		metadata := MetadataFromInt(proofd.ADisclosed[1], configuration) // index 1 is metadata attribute
+		metadata := MetadataFromInt(proof.DisclosedAttributes[1].IntValue(), configuration) // index 1 is metadata attribute
 
 		skipCheck := slices.Contains(skipExpiryCheck, metadata.CredentialType().Identifier())
 		if !skipCheck && metadata.Expiry().Before(*t) {
@@ -103,24 +94,19 @@ func (pl ProofList) Expired(configuration *Configuration, t *time.Time, skipExpi
 	return false, nil
 }
 
-func extractAttribute(pl gabi.ProofList, index *DisclosedAttributeIndex, notrevoked *time.Time, conf *Configuration) (*DisclosedAttribute, *string, error) {
-	if len(pl) < index.CredentialIndex {
+func extractAttribute(pl ProofList, index *DisclosedAttributeIndex, notrevoked *time.Time, conf *Configuration) (*DisclosedAttribute, *string, error) {
+	if len(pl.CredentialDisclosures) < index.CredentialIndex {
 		return nil, nil, errors.New("Credential index out of range")
 	}
-	proofd, ok := pl[index.CredentialIndex].(*gabi.ProofD)
-	if !ok {
-		// If with the index the user told us to look for the required attribute at this specific location,
-		// and the proof here is not a disclosure proof, then reject
-		return nil, nil, errors.New("ProofList contained proof of invalid type")
-	}
+	proofd := pl.CredentialDisclosures[index.CredentialIndex]
 
-	metadata := MetadataFromInt(proofd.ADisclosed[1], conf) // index 1 is metadata attribute
-	attr, str, err := parseAttribute(index.AttributeIndex, metadata, proofd.ADisclosed[index.AttributeIndex])
+	metadata := MetadataFromInt(proofd.DisclosedAttributes[1].IntValue(), conf) // index 1 is metadata attribute
+	attr, str, err := parseAttribute(index.AttributeIndex, metadata, proofd.DisclosedAttributes[index.AttributeIndex].IntValue())
 	if err != nil {
 		return nil, nil, err
 	}
 	attr.NotRevokedBefore = (*Timestamp)(notrevoked)
-	attr.NotRevoked = proofd.NonRevocationProof != nil
+	attr.NotRevoked = true
 	return attr, str, nil
 }
 
@@ -134,7 +120,7 @@ func (pl ProofList) VerifyProofs(
 	isSig bool,
 ) (bool, map[int]*time.Time, error) {
 	// Empty proof lists are allowed (if consistent with the session request, which is checked elsewhere)
-	if len(pl) == 0 {
+	if len(pl.CredentialDisclosures) == 0 {
 		return true, nil, nil
 	}
 
@@ -146,22 +132,22 @@ func (pl ProofList) VerifyProofs(
 		}
 	}
 
-	if len(pl) != len(publickeys) {
+	if len(pl.CredentialDisclosures) != len(publickeys) {
 		return false, nil, errors.New("Insufficient public keys to verify the proofs")
 	}
 
 	// Compute slice to inform gabi of which proofs should be verified to share the same secret key
-	keyshareServers := make([]string, len(pl))
-	for i := range pl {
-		schemeID := NewIssuerIdentifier(publickeys[i].Issuer).SchemeManagerIdentifier()
-		if !configuration.SchemeManagers[schemeID].Distributed() {
-			keyshareServers[i] = "." // dummy value: no IRMA scheme will ever have this name
-		} else {
-			keyshareServers[i] = schemeID.Name()
-		}
-	}
+	// keyshareServers := make([]string, len(pl))
+	// for i := range pl {
+	// 	schemeID := NewIssuerIdentifier(publickeys[i].Issuer).SchemeManagerIdentifier()
+	// 	if !configuration.SchemeManagers[schemeID].Distributed() {
+	// 		keyshareServers[i] = "." // dummy value: no IRMA scheme will ever have this name
+	// 	} else {
+	// 		keyshareServers[i] = schemeID.Name()
+	// 	}
+	// }
 
-	if !gabi.ProofList(pl).Verify(publickeys, context, nonce, isSig, keyshareServers) {
+	if !(*gabi.DisclosureProof)(&pl).Verify() {
 		return false, nil, nil
 	}
 
@@ -170,16 +156,12 @@ func (pl ProofList) VerifyProofs(
 	// - verify that all required nonrevocation proofs are present
 	singletons := map[CredentialTypeIdentifier]bool{}
 	revocationtime := map[int]*time.Time{} // per proof, stores up to what time it is known to be not revoked
-	var revParams NonRevocationParameters
+	//var revParams NonRevocationParameters
 	if request != nil {
-		revParams = request.Base().Revocation
+		//revParams = request.Base().Revocation
 	}
-	for i, proof := range pl {
-		proofd, ok := proof.(*gabi.ProofD)
-		if !ok {
-			continue
-		}
-		typ := MetadataFromInt(proofd.ADisclosed[1], configuration).CredentialType()
+	for _, proof := range pl.CredentialDisclosures {
+		typ := MetadataFromInt(proof.DisclosedAttributes[1].IntValue(), configuration).CredentialType()
 		if typ == nil {
 			return false, nil, errors.New("Received unknown credential type")
 		}
@@ -197,69 +179,65 @@ func (pl ProofList) VerifyProofs(
 		// nonrevocation proofs are present, and against the expected accumulator value:
 		// the last one in the update message set we provided along with the session request,
 		// OR a newer one included in the proofs itself.
-		if !proofd.HasNonRevocationProof() {
-			if revParams[id] != nil {
-				// no nonrevocation proof is included but one was required in the session request
-				return false, nil, nil
-			} else {
-				continue
-			}
-		}
+		// if !proofd.HasNonRevocationProof() {
+		// 	if revParams[id] != nil {
+		// 		// no nonrevocation proof is included but one was required in the session request
+		// 		return false, nil, nil
+		// 	} else {
+		// 		continue
+		// 	}
+		// }
 
-		sig := proofd.NonRevocationProof.SignedAccumulator
-		pk, err := RevocationKeys{configuration}.PublicKey(typ.IssuerIdentifier(), sig.PKCounter)
-		if err != nil {
-			return false, nil, nil
-		}
-		acc, err := proofd.NonRevocationProof.SignedAccumulator.UnmarshalVerify(pk)
-		if err != nil {
-			return false, nil, nil
-		}
+		// sig := proofd.NonRevocationProof.SignedAccumulator
+		// pk, err := RevocationKeys{configuration}.PublicKey(typ.IssuerIdentifier(), sig.PKCounter)
+		// if err != nil {
+		// 	return false, nil, nil
+		// }
+		// acc, err := proofd.NonRevocationProof.SignedAccumulator.UnmarshalVerify(pk)
+		// if err != nil {
+		// 	return false, nil, nil
+		// }
 
-		theirs := acc.Index
-		acctime := time.Unix(acc.Time, 0)
-		settings := configuration.Revocation.settings.Get(id)
-		var ours uint64
-		var updates map[uint]*revocation.Update
-		if revParams[id] != nil {
-			updates = revParams[id].Updates
-		}
-		if u := updates[sig.PKCounter]; u != nil {
-			ours = u.Events[len(u.Events)-1].Index
-		}
-		if ours > theirs {
-			return false, nil, nil
-		}
-		if ours == theirs {
-			if settings.updated.After(acctime) {
-				acctime = settings.updated
-			}
-		}
-		if validAt == nil {
-			t := time.Now()
-			validAt = &t
-		}
-		tolerance := settings.Tolerance
-		if s := revParams[id]; s != nil && s.Tolerance != 0 {
-			tolerance = s.Tolerance
-		}
-		if uint64(validAt.Sub(acctime).Seconds()) > tolerance {
-			revocationtime[i] = &acctime
-		}
+		// theirs := acc.Index
+		// acctime := time.Unix(acc.Time, 0)
+		// settings := configuration.Revocation.settings.Get(id)
+		// var ours uint64
+		// var updates map[uint]*revocation.Update
+		// if revParams[id] != nil {
+		// 	updates = revParams[id].Updates
+		// }
+		// if u := updates[sig.PKCounter]; u != nil {
+		// 	ours = u.Events[len(u.Events)-1].Index
+		// }
+		// if ours > theirs {
+		// 	return false, nil, nil
+		// }
+		// if ours == theirs {
+		// 	if settings.updated.After(acctime) {
+		// 		acctime = settings.updated
+		// 	}
+		// }
+		// if validAt == nil {
+		// 	t := time.Now()
+		// 	validAt = &t
+		// }
+		// tolerance := settings.Tolerance
+		// if s := revParams[id]; s != nil && s.Tolerance != 0 {
+		// 	tolerance = s.Tolerance
+		// }
+		// if uint64(validAt.Sub(acctime).Seconds()) > tolerance {
+		// 	revocationtime[i] = &acctime
+		// }
 	}
 
 	return true, revocationtime, nil
 }
 
 func (d *Disclosure) extraIndices(condiscon AttributeConDisCon) []*DisclosedAttributeIndex {
-	disclosed := make([]map[int]struct{}, len(d.Proofs))
-	for i, proof := range d.Proofs {
-		proofd, ok := proof.(*gabi.ProofD)
-		if !ok {
-			continue
-		}
+	disclosed := make([]map[int]struct{}, len(d.Proofs.CredentialDisclosures))
+	for i, proofd := range d.Proofs.CredentialDisclosures {
 		disclosed[i] = map[int]struct{}{}
-		for j := range proofd.ADisclosed {
+		for j := range proofd.DisclosedAttributes {
 			if j <= 1 {
 				continue
 			}
@@ -303,7 +281,7 @@ func (d *Disclosure) DisclosedAttributes(configuration *Configuration, condiscon
 	var extra []*DisclosedAttribute
 	indices := d.extraIndices(condiscon)
 	for _, index := range indices {
-		attr, _, err := extractAttribute(d.Proofs, index, revtimes[index.CredentialIndex], configuration)
+		attr, _, err := extractAttribute((ProofList)(d.Proofs), index, revtimes[index.CredentialIndex], configuration)
 		if err != nil {
 			return false, nil, err
 		}
@@ -409,7 +387,7 @@ func (d *Disclosure) Verify(configuration *Configuration, request *DisclosureReq
 func (sm *SignedMessage) Verify(configuration *Configuration, request *SignatureRequest) ([][]*DisclosedAttribute, ProofStatus, error) {
 	var message string
 
-	if len(sm.Signature) == 0 {
+	if len(sm.Signature.CredentialDisclosures) == 0 {
 		return nil, ProofStatusInvalid, nil
 	}
 

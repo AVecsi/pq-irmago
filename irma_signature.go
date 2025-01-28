@@ -6,8 +6,8 @@ import (
 	"log"
 	gobig "math/big"
 
-	"github.com/BeardOfDoom/pq-gabi"
-	"github.com/BeardOfDoom/pq-gabi/big"
+	gabi "github.com/AVecsi/pq-gabi"
+	"github.com/AVecsi/pq-gabi/big"
 	"github.com/bwesterb/go-atum"
 )
 
@@ -17,7 +17,7 @@ const LDContextSignedMessage = "https://irma.app/ld/signature/v2"
 // The 'realnonce' will be calculated as: SigRequest.GetNonce() = ASN1(nonce, SHA256(message), timestampSignature)
 type SignedMessage struct {
 	LDContext string                    `json:"@context"`
-	Signature gabi.ProofList            `json:"signature"`
+	Signature gabi.DisclosureProof      `json:"signature"`
 	Indices   DisclosedAttributeIndices `json:"indices"`
 	Nonce     *big.Int                  `json:"nonce"`
 	Context   *big.Int                  `json:"context"`

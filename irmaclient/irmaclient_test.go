@@ -9,12 +9,12 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/BeardOfDoom/pq-gabi/gabikeys"
-	"github.com/BeardOfDoom/pq-gabi/signed"
-	irma "github.com/BeardOfDoom/pq-irmago"
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
-	"github.com/BeardOfDoom/pq-irmago/internal/concmap"
-	"github.com/BeardOfDoom/pq-irmago/internal/test"
+	"github.com/AVecsi/pq-gabi/gabikeys"
+	"github.com/AVecsi/pq-gabi/signed"
+	irma "github.com/AVecsi/pq-irmago"
+	"github.com/AVecsi/pq-irmago/internal/common"
+	"github.com/AVecsi/pq-irmago/internal/concmap"
+	"github.com/AVecsi/pq-irmago/internal/test"
 	"github.com/sirupsen/logrus"
 
 	"github.com/go-errors/errors"

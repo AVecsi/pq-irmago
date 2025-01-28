@@ -3,8 +3,8 @@ package sessiontest
 import (
 	"testing"
 
-	irma "github.com/BeardOfDoom/pq-irmago"
-	"github.com/BeardOfDoom/pq-irmago/internal/test"
+	irma "github.com/AVecsi/pq-irmago"
+	"github.com/AVecsi/pq-irmago/internal/test"
 	"github.com/stretchr/testify/require"
 )
 

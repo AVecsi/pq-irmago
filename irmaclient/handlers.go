@@ -3,7 +3,7 @@ package irmaclient
 import (
 	"fmt"
 
-	irma "github.com/BeardOfDoom/pq-irmago"
+	irma "github.com/AVecsi/pq-irmago"
 	"github.com/go-errors/errors"
 )
 

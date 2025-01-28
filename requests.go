@@ -9,10 +9,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/BeardOfDoom/pq-gabi"
-	"github.com/BeardOfDoom/pq-gabi/big"
-	"github.com/BeardOfDoom/pq-gabi/revocation"
-	"github.com/BeardOfDoom/pq-irmago/internal/common"
+	gabi "github.com/AVecsi/pq-gabi"
+	"github.com/AVecsi/pq-gabi/big"
+	"github.com/AVecsi/pq-irmago/internal/common"
 	"github.com/bwesterb/go-atum"
 	"github.com/go-errors/errors"
 	"github.com/golang-jwt/jwt/v4"
@@ -251,8 +250,9 @@ type RevocationRequest struct {
 }
 
 type NonRevocationRequest struct {
-	Tolerance uint64                      `json:"tolerance,omitempty"`
-	Updates   map[uint]*revocation.Update `json:"updates,omitempty"`
+	Tolerance uint64 `json:"tolerance,omitempty"`
+	//TODO VADAM didnt want to delete the field, but probably will cause issues
+	Updates map[uint]*int `json:"updates,omitempty"`
 }
 
 type NonRevocationParameters map[CredentialTypeIdentifier]*NonRevocationRequest
@@ -423,7 +423,7 @@ func (ar *AttributeRequest) Satisfy(attr AttributeTypeIdentifier, val *string) b
 
 // Satisfy returns if each of the attributes specified by proofs and indices satisfies each of
 // the contained AttributeRequests's. If so it also returns a list of the disclosed attribute values.
-func (c AttributeCon) Satisfy(proofs gabi.ProofList, indices []*DisclosedAttributeIndex, revocation map[int]*time.Time, conf *Configuration) (bool, []*DisclosedAttribute, error) {
+func (c AttributeCon) Satisfy(proofs gabi.DisclosureProof, indices []*DisclosedAttributeIndex, revocation map[int]*time.Time, conf *Configuration) (bool, []*DisclosedAttribute, error) {
 	if len(indices) < len(c) {
 		return false, nil, nil
 	}
@@ -434,7 +434,7 @@ func (c AttributeCon) Satisfy(proofs gabi.ProofList, indices []*DisclosedAttribu
 
 	for j := range c {
 		index := indices[j]
-		attr, val, err := extractAttribute(proofs, index, revocation[index.CredentialIndex], conf)
+		attr, val, err := extractAttribute((ProofList)(proofs), index, revocation[index.CredentialIndex], conf)
 		if err != nil {
 			return false, nil, err
 		}
@@ -461,7 +461,7 @@ func (dc AttributeDisCon) Validate() error {
 
 // Satisfy returns true if the attributes specified by proofs and indices satisfies any one of the
 // contained AttributeCon's. If so it also returns a list of the disclosed attribute values.
-func (dc AttributeDisCon) Satisfy(proofs gabi.ProofList, indices []*DisclosedAttributeIndex, revocation map[int]*time.Time, conf *Configuration) (bool, []*DisclosedAttribute, error) {
+func (dc AttributeDisCon) Satisfy(proofs gabi.DisclosureProof, indices []*DisclosedAttributeIndex, revocation map[int]*time.Time, conf *Configuration) (bool, []*DisclosedAttribute, error) {
 	for _, con := range dc {
 		satisfied, attrs, err := con.Satisfy(proofs, indices, revocation, conf)
 		if err != nil {
@@ -627,7 +627,7 @@ func (cr *CredentialRequest) PublicKeyIdentifier() PublicKeyIdentifier {
 }
 
 func (cr *CredentialRequest) Info(conf *Configuration, metadataVersion byte, issuedAt time.Time) (*CredentialInfo, error) {
-	list, err := cr.AttributeList(conf, metadataVersion, nil, issuedAt)
+	list, err := cr.AttributeList(conf, metadataVersion, issuedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -697,7 +697,6 @@ func stringSliceEqual(a, b []string) bool {
 func (cr *CredentialRequest) AttributeList(
 	conf *Configuration,
 	metadataVersion byte,
-	revocationAttr *big.Int,
 	issuedAt time.Time,
 ) (*AttributeList, error) {
 	if err := cr.Validate(conf); err != nil {
@@ -705,7 +704,7 @@ func (cr *CredentialRequest) AttributeList(
 	}
 
 	credtype := conf.CredentialTypes[cr.CredentialTypeID]
-	if !credtype.RevocationSupported() && revocationAttr != nil {
+	if !credtype.RevocationSupported() {
 		return nil, errors.Errorf("cannot specify revocationAttr: credtype %s does not support revocation", cr.CredentialTypeID.String())
 	}
 
@@ -722,11 +721,7 @@ func (cr *CredentialRequest) AttributeList(
 	attrs := make([]*big.Int, len(credtype.AttributeTypes)+1)
 	attrs[0] = meta.Int
 	if credtype.RevocationSupported() {
-		if revocationAttr != nil {
-			attrs[credtype.RevocationIndex+1] = revocationAttr
-		} else {
-			attrs[credtype.RevocationIndex+1] = bigZero
-		}
+		attrs[credtype.RevocationIndex+1] = bigZero
 	}
 	for i, attrtype := range credtype.AttributeTypes {
 		if attrtype.RevocationAttribute || attrtype.RandomBlind {
