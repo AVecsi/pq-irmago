@@ -7,14 +7,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AVecsi/pq-gabi"
+	gabi "github.com/AVecsi/pq-gabi"
 	"github.com/AVecsi/pq-gabi/big"
-	"github.com/AVecsi/pq-gabi/gabikeys"
-	"github.com/AVecsi/pq-gabi/revocation"
 	irma "github.com/AVecsi/pq-irmago"
 	"github.com/AVecsi/pq-irmago/internal/common"
 	"github.com/AVecsi/pq-irmago/internal/concmap"
 	"github.com/bwesterb/go-atum"
+	"github.com/cbergoon/merkletree"
 	"github.com/go-co-op/gocron"
 	"github.com/go-errors/errors"
 )
@@ -48,7 +47,6 @@ type Client struct {
 	secretkey        *secretKey
 	attributes       map[irma.CredentialTypeIdentifier][]*irma.AttributeList
 	credentialsCache concmap.ConcMap[credLookup, *credential]
-	keyshareServers  map[irma.SchemeManagerIdentifier]*keyshareServer
 	updates          []update
 
 	lookup map[string]*credLookup
@@ -161,7 +159,6 @@ func New(
 	}
 
 	client := &Client{
-		keyshareServers:       make(map[irma.SchemeManagerIdentifier]*keyshareServer),
 		attributes:            make(map[irma.CredentialTypeIdentifier][]*irma.AttributeList),
 		irmaConfigurationPath: irmaConfigurationPath,
 		handler:               handler,
@@ -222,7 +219,6 @@ func New(
 	})
 
 	client.jobs = make(chan func(), 100)
-	client.initRevocation()
 	client.StartJobs()
 
 	return client, schemeMgrErr
@@ -239,9 +235,6 @@ func (client *Client) loadCredentialStorage() (err error) {
 		return
 	}
 	if client.attributes, err = client.storage.LoadAttributes(); err != nil {
-		return
-	}
-	if client.keyshareServers, err = client.storage.LoadKeyshareServers(); err != nil {
 		return
 	}
 
@@ -454,7 +447,6 @@ func (client *Client) RemoveStorage() error {
 
 	// Remove data from memory
 	client.attributes = make(map[irma.CredentialTypeIdentifier][]*irma.AttributeList)
-	client.keyshareServers = make(map[irma.SchemeManagerIdentifier]*keyshareServer)
 	client.credentialsCache = concmap.New[credLookup, *credential]()
 	client.lookup = make(map[string]*credLookup)
 
@@ -551,7 +543,7 @@ func (client *Client) credential(id irma.CredentialTypeIdentifier, counter int) 
 		return
 	}
 
-	sig, witness, err := client.storage.LoadSignature(attrs)
+	sig, err := client.storage.LoadSignature(attrs)
 	if err != nil {
 		return nil, err
 	}
@@ -566,11 +558,26 @@ func (client *Client) credential(id irma.CredentialTypeIdentifier, counter int) 
 	if pk == nil {
 		return nil, errors.New("unknown public key")
 	}
+
+	var merkleLeaves []merkletree.Content
+	var gabiAttributes []*gabi.Attribute
+
+	for i := range attrs.Ints {
+		gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attrs.Ints[i].Bytes()})
+		merkleLeaves = append(merkleLeaves, gabi.Attribute{Value: attrs.Ints[i].Bytes()})
+	}
+
+	merkleTree, err := merkletree.NewTreeWithHashStrategy(merkleLeaves, gabi.HashStrategy)
+	if err != nil {
+		return nil, err
+	}
+
 	cred, err = newCredential(&gabi.Credential{
-		Attributes:           append([]*big.Int{client.secretkey.Key}, attrs.Ints...),
-		Signature:            sig,
-		NonRevocationWitness: witness,
-		Pk:                   pk,
+		Signature: sig,
+		Attributes: append([]*gabi.Attribute{
+			&gabi.Attribute{Value: client.secretkey.Key.Bytes()},
+		}, gabiAttributes...),
+		AttrTreeRoot: merkleTree.MerkleRoot(),
 	}, attrs, client.Configuration)
 	if err != nil {
 		return nil, err
@@ -689,12 +696,10 @@ func (client *Client) satisfiesCon(request irma.SessionRequest, attrs *irma.Attr
 	if !credfound {
 		return false, false
 	}
-	cred, _, _ := client.credentialByHash(attrs.Hash())
-	usable := !attrs.Revoked && (!request.Base().RequestsRevocation(credtype) || cred.NonRevocationWitness != nil)
-
+	usable := false
 	skipExpiryCheck := slices.Contains(request.Disclosure().SkipExpiryCheck, attrs.CredentialType().Identifier())
 	if !skipExpiryCheck {
-		usable = usable && attrs.IsValid()
+		usable = attrs.IsValid()
 	}
 
 	return true, usable
@@ -729,13 +734,9 @@ func (set credCandidateSet) expand(client *Client, base *irma.BaseRequest, con i
 				}
 				if credopt.Present() {
 					attrlist, _ := client.attributesByHash(credopt.Hash)
-					cred, _, err := client.credentialByHash(credopt.Hash)
-					if err != nil {
-						return nil, err
-					}
 					attropt.Expired = !attrlist.IsValid()
 					attropt.Revoked = attrlist.Revoked
-					attropt.NotRevokable = cred.NonRevocationWitness == nil && base.RequestsRevocation(credopt.Type)
+					attropt.NotRevokable = true
 				}
 				candidateSet = append(candidateSet, attropt)
 			}
@@ -884,39 +885,37 @@ func (client *Client) groupCredentials(choice *irma.DisclosureChoice) (
 
 // ProofBuilders constructs a list of proof builders for the specified attribute choice.
 func (client *Client) ProofBuilders(choice *irma.DisclosureChoice, request irma.SessionRequest,
-) (gabi.ProofBuilderList, irma.DisclosedAttributeIndices, *atum.Timestamp, error) {
+) (*gabi.DisclosureProof, irma.DisclosedAttributeIndices, *atum.Timestamp, error) {
 	todisclose, attributeIndices, err := client.groupCredentials(choice)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	var builders gabi.ProofBuilderList
-	var builder gabi.ProofBuilder
+	var credDisclosures []*gabi.CredentialDisclosure
+	var credDisclosure *gabi.CredentialDisclosure
+	var creds []*gabi.Credential
 	for _, grp := range todisclose {
 		cred, err := client.credentialByID(grp.cred)
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		if cred.attrs.Revoked {
-			return nil, nil, nil, revocation.ErrorRevoked
-		}
-		nonrev := request.Base().RequestsRevocation(cred.CredentialType().Identifier())
-		builder, err = cred.CreateDisclosureProofBuilder(grp.attrs, nil, nonrev)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		builders = append(builders, builder)
+
+		credDisclosure = gabi.CreateCredentialDisclosure(cred.Credential, grp.attrs)
+		credDisclosures = append(credDisclosures, credDisclosure)
+
+		creds = append(creds, cred.Credential)
 	}
 
 	var timestamp *atum.Timestamp
 	if r, ok := request.(*irma.SignatureRequest); ok {
 		var sigs []*big.Int
 		var disclosed [][]*big.Int
-		var s *big.Int
 		var d []*big.Int
-		for _, builder := range builders {
-			s, d = builder.(*gabi.DisclosureProofBuilder).TimestampRequestContributions()
-			sigs = append(sigs, s)
+		for _, credDisclosure := range credDisclosures {
+			sigs = append(sigs, new(big.Int).SetBytes(credDisclosure.SignatureProof.Proof))
+			for i := range len(credDisclosure.DisclosedAttributes) {
+				d = append(d, credDisclosure.DisclosedAttributes[i].IntValue())
+			}
 			disclosed = append(disclosed, d)
 		}
 		timestamp, err = irma.GetTimestamp(r.Message, sigs, disclosed, client.Configuration)
@@ -925,23 +924,24 @@ func (client *Client) ProofBuilders(choice *irma.DisclosureChoice, request irma.
 		}
 	}
 
-	return builders, attributeIndices, timestamp, nil
+	//TODO VADAM request.GetNonce(timestamp)
+	disclosureProof, err := gabi.CreateDisclosureProof(creds, credDisclosures)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return disclosureProof, attributeIndices, timestamp, nil
 }
 
 // Proofs computes disclosure proofs containing the attributes specified by choice.
 func (client *Client) Proofs(choice *irma.DisclosureChoice, request irma.SessionRequest) (*irma.Disclosure, *atum.Timestamp, error) {
-	builders, choices, timestamp, err := client.ProofBuilders(choice, request)
+	disclosureProof, choices, timestamp, err := client.ProofBuilders(choice, request)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	_, issig := request.(*irma.SignatureRequest)
-	proofs, err := builders.BuildProofList(request.Base().GetContext(), request.GetNonce(timestamp), issig)
-	if err != nil {
-		return nil, nil, err
-	}
 	return &irma.Disclosure{
-		Proofs:  proofs,
+		Proofs:  *disclosureProof,
 		Indices: choices,
 	}, timestamp, nil
 }
@@ -955,127 +955,70 @@ func generateIssuerProofNonce() (*big.Int, error) {
 // for the future credentials as well as possibly any disclosed attributes, and generates
 // a nonce against which the issuer's proof of knowledge must verify.
 func (client *Client) IssuanceProofBuilders(
-	request *irma.IssuanceRequest, choice *irma.DisclosureChoice, keyshareSession *keyshareSession,
-) (gabi.ProofBuilderList, irma.DisclosedAttributeIndices, *big.Int, error) {
-	issuerProofNonce, err := generateIssuerProofNonce()
+	request *irma.IssuanceRequest, choice *irma.DisclosureChoice,
+) (irma.DisclosedAttributeIndices, error) {
+	_, choices, _, err := client.ProofBuilders(choice, request)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
-	builders := gabi.ProofBuilderList([]gabi.ProofBuilder{})
-
-	var keysharePs = map[irma.SchemeManagerIdentifier]*irma.PMap{}
-	if keyshareSession != nil {
-		keysharePs, err = keyshareSession.getKeysharePs(request)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-	}
-
-	for _, futurecred := range request.Credentials {
-		var pk *gabikeys.PublicKey
-		keyID := futurecred.PublicKeyIdentifier()
-		schemeID := keyID.Issuer.SchemeManagerIdentifier()
-		distributed := client.Configuration.SchemeManagers[schemeID].Distributed()
-		var keyshareP *big.Int
-		var present bool
-		if distributed {
-			keyshareP, present = keysharePs[schemeID].Ps[keyID]
-			if distributed && !present {
-				return nil, nil, nil, errors.Errorf("missing keyshareP for %s-%d", keyID.Issuer, keyID.Counter)
-			}
-		}
-
-		pk, err = client.Configuration.PublicKey(futurecred.CredentialTypeID.IssuerIdentifier(), futurecred.KeyCounter)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		credtype := client.Configuration.CredentialTypes[futurecred.CredentialTypeID]
-		credBuilder, err := gabi.NewCredentialBuilder(pk, request.GetContext(),
-			client.secretkey.Key, issuerProofNonce, keyshareP, credtype.RandomBlindAttributeIndices())
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		builders = append(builders, credBuilder)
-	}
-
-	disclosures, choices, _, err := client.ProofBuilders(choice, request)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	builders = append(disclosures, builders...)
-	return builders, choices, issuerProofNonce, nil
+	return choices, nil
 }
 
 // IssueCommitments computes issuance commitments, along with disclosure proofs specified by choice,
 // and also returns the credential builders which will become the new credentials upon combination with the issuer's signature.
 func (client *Client) IssueCommitments(request *irma.IssuanceRequest, choice *irma.DisclosureChoice,
-) (*irma.IssueCommitmentMessage, gabi.ProofBuilderList, error) {
-	builders, choices, issuerProofNonce, err := client.IssuanceProofBuilders(request, choice, nil)
+) (*irma.IssueCommitmentMessage, error) {
+	choices, err := client.IssuanceProofBuilders(request, choice)
 	if err != nil {
-		return nil, nil, err
-	}
-	proofs, err := builders.BuildProofList(request.GetContext(), request.GetNonce(nil), false)
-	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	return &irma.IssueCommitmentMessage{
-		IssueCommitmentMessage: &gabi.IssueCommitmentMessage{
-			Proofs: proofs,
-			Nonce2: issuerProofNonce,
-		},
 		Indices: choices,
-	}, builders, nil
+	}, nil
 }
 
 // ConstructCredentials constructs and saves new credentials using the specified issuance signature messages
 // and credential builders.
-func (client *Client) ConstructCredentials(msg []*gabi.IssueSignatureMessage, request *irma.IssuanceRequest, builders gabi.ProofBuilderList) error {
-	if len(msg) > len(builders) {
-		return errors.New("Received unexpected amount of signatures")
-	}
+func (client *Client) ConstructCredentials(msg []*gabi.ZkDilSignature, request *irma.IssuanceRequest) error {
 
 	// First collect all credentials in a slice, so that if one of them induces an error,
 	// we save none of them to fail the session cleanly
 	gabicreds := []*gabi.Credential{}
-	offset := 0
-	for i, builder := range builders {
-		credbuilder, ok := builder.(*gabi.CredentialBuilder)
-		if !ok { // Skip builders of disclosure proofs
-			offset++
-			continue
-		}
-		sig := msg[i-offset]
+	attrInts := [][]*big.Int{}
+	for i, sig := range msg {
 
-		var nonrevAttr *big.Int
-		if sig.NonRevocationWitness != nil {
-			nonrevAttr = sig.NonRevocationWitness.E
-		}
 		issuedAt := time.Now()
-		req := request.Credentials[i-offset]
-		if !req.RevocationSupported && (nonrevAttr != nil) {
-			return errors.New("credential signature unexpectedly containend nonrevocation witness")
-		}
-		if req.RevocationSupported && (nonrevAttr == nil) {
-			return errors.New("credential signature did not contain nonrevocation witness")
-		}
+		req := request.Credentials[i]
 		attrs, err := req.AttributeList(
 			client.Configuration,
 			irma.GetMetadataVersion(request.Base().ProtocolVersion),
-			nonrevAttr,
 			issuedAt,
 		)
 		if err != nil {
 			return err
 		}
-		cred, err := credbuilder.ConstructCredential(sig, attrs.Ints)
+
+		var merkleLeaves []merkletree.Content
+		var gabiAttributes []*gabi.Attribute
+
+		for i := range attrs.Ints {
+			gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attrs.Ints[i].Bytes()})
+			merkleLeaves = append(merkleLeaves, gabi.Attribute{Value: attrs.Ints[i].Bytes()})
+		}
+
+		merkleTree, err := merkletree.NewTreeWithHashStrategy(merkleLeaves, gabi.HashStrategy)
 		if err != nil {
 			return err
 		}
+
+		cred := &gabi.Credential{Signature: sig, Attributes: gabiAttributes, AttrTreeRoot: merkleTree.MerkleRoot()}
+
 		gabicreds = append(gabicreds, cred)
+		attrInts = append(attrInts, attrs.Ints[1:])
 	}
 
-	for _, gabicred := range gabicreds {
-		attrs := irma.NewAttributeListFromInts(gabicred.Attributes[1:], client.Configuration)
+	for i, gabicred := range gabicreds {
+		attrs := irma.NewAttributeListFromInts(attrInts[i], client.Configuration)
 		newcred, err := newCredential(gabicred, attrs, client.Configuration)
 		if err != nil {
 			return err
@@ -1092,8 +1035,8 @@ func (client *Client) ConstructCredentials(msg []*gabi.IssueSignatureMessage, re
 
 func (client *Client) genSchemeManagersList(enrolled bool) []irma.SchemeManagerIdentifier {
 	list := []irma.SchemeManagerIdentifier{}
-	for name, manager := range client.Configuration.SchemeManagers {
-		if _, contains := client.keyshareServers[name]; manager.Distributed() && contains == enrolled {
+	for _, manager := range client.Configuration.SchemeManagers {
+		if manager.Distributed() {
 			list = append(list, manager.Identifier())
 		}
 	}
@@ -1108,267 +1051,9 @@ func (client *Client) EnrolledSchemeManagers() []irma.SchemeManagerIdentifier {
 	return client.genSchemeManagersList(true)
 }
 
-// KeyshareEnroll attempts to enroll at the keyshare server of the specified scheme manager.
-func (client *Client) KeyshareEnroll(manager irma.SchemeManagerIdentifier, email *string, pin string, lang string) {
-	go func() {
-		err := client.keyshareEnrollWorker(manager, email, pin, lang)
-		if err != nil {
-			client.handler.EnrollmentFailure(manager, err)
-		}
-	}()
-}
-
-func (client *Client) keyshareEnrollWorker(managerID irma.SchemeManagerIdentifier, email *string, pin string, lang string) error {
-	manager, ok := client.Configuration.SchemeManagers[managerID]
-	if !ok {
-		return errors.New("Unknown scheme manager")
-	}
-	if len(manager.KeyshareServer) == 0 {
-		return errors.New("Scheme manager has no keyshare server")
-	}
-	if len(pin) < 5 {
-		return errors.New("PIN too short, must be at least 5 characters")
-	}
-
-	// We expect that the PIN is equal across all keyshare servers. Therefore, we verify the PIN at one other
-	// keyshare server. We don't check all servers to prevent issues when custom keyshare servers are not available.
-	var err error
-	pinCorrect := true
-	for kssManagerID, kss := range client.keyshareServers {
-		if kss.PinOutOfSync {
-			continue
-		}
-		pinCorrect, _, _, err = client.KeyshareVerifyPin(pin, kssManagerID)
-		if err == nil {
-			break
-		}
-	}
-	if err != nil {
-		return irma.WrapErrorPrefix(err, "failed to validate pin")
-	}
-	if !pinCorrect {
-		return errors.New("incorrect pin")
-	}
-
-	keyname := challengeResponseKeyName(managerID)
-	pk, err := client.signer.PublicKey(keyname)
-	if err != nil {
-		return err
-	}
-
-	kss, err := newKeyshareServer(managerID)
-	if err != nil {
-		return err
-	}
-
-	jwtt, err := SignerCreateJWT(client.signer, keyname, irma.KeyshareEnrollmentClaims{
-		KeyshareEnrollmentData: irma.KeyshareEnrollmentData{
-			Email:     email,
-			Pin:       kss.HashedPin(pin),
-			Language:  lang,
-			PublicKey: pk,
-		},
-	})
-	if err != nil {
-		return err
-	}
-
-	transport := irma.NewHTTPTransport(manager.KeyshareServer, !client.Preferences.DeveloperMode)
-	qr := &irma.Qr{}
-	err = transport.Post("client/register", qr, irma.KeyshareEnrollment{EnrollmentJWT: jwtt})
-	if err != nil {
-		return err
-	}
-
-	// We add the new keyshare server to the client here, without saving it to disk,
-	// and start the issuance session for the keyshare server login attribute -
-	// keyshare.go needs the relevant keyshare server to be present in the client.
-	// If the session succeeds or fails, the keyshare server is stored to disk or
-	// removed from the client by the keyshareEnrollmentHandler.
-	client.keyshareServers[managerID] = kss
-	handler := &backgroundIssuanceHandler{
-		pin: pin,
-		credentialsToBeIssuedCallback: func(creds []*irma.CredentialRequest) {
-			// We need to store the keyshare username before the issuance permission is granted.
-			// Otherwise, authentication to the keyshare server fails during issuance of the keyshare attribute.
-			for _, attr := range creds[0].Attributes {
-				kss.Username = attr
-				break
-			}
-		},
-		resultErr: make(chan error),
-	}
-	client.newQrSession(qr, handler)
-	go func() {
-		err := <-handler.resultErr
-		if err != nil {
-			client.handler.EnrollmentFailure(managerID, irma.WrapErrorPrefix(err, "keyshare attribute issuance"))
-			return
-		}
-		err = client.storage.StoreKeyshareServers(client.keyshareServers)
-		if err != nil {
-			client.handler.EnrollmentFailure(managerID, err)
-			return
-		}
-		client.handler.EnrollmentSuccess(kss.SchemeManagerIdentifier)
-	}()
-
-	return nil
-}
-
 func challengeResponseKeyName(scheme irma.SchemeManagerIdentifier) string {
 	// Use a dot as separator because those never occur in scheme names
 	return scheme.Name() + ".challengeResponseKey"
-}
-
-// KeyshareVerifyPin verifies the specified PIN at the keyshare server, returning if it succeeded;
-// if not, how many tries are left, or for how long the user is blocked. If an error is returned
-// it is of type *irma.SessionError.
-func (client *Client) KeyshareVerifyPin(pin string, schemeid irma.SchemeManagerIdentifier) (bool, int, int, error) {
-	scheme := client.Configuration.SchemeManagers[schemeid]
-	if scheme == nil || !scheme.Distributed() {
-		return false, 0, 0, &irma.SessionError{
-			Err:       errors.Errorf("Can't verify pin of scheme %s", schemeid.String()),
-			ErrorType: irma.ErrorUnknownSchemeManager,
-			Info:      schemeid.String(),
-		}
-	}
-	kss := client.keyshareServers[schemeid]
-	transport := irma.NewHTTPTransport(scheme.KeyshareServer, !client.Preferences.DeveloperMode)
-	success, tries, blocked, err := client.verifyPinWorker(pin, kss, transport)
-	if err == nil && success {
-		client.ensureKeyshareAttributeValid(pin, kss, transport)
-	}
-	return success, tries, blocked, err
-}
-
-func (client *Client) KeyshareChangePin(oldPin string, newPin string) {
-	go func() {
-		// Check whether all keyshare servers are available.
-		for schemeID, kss := range client.keyshareServers {
-			if kss.PinOutOfSync {
-				continue
-			}
-			success, attempts, blocked, err := client.KeyshareVerifyPin(oldPin, schemeID)
-			if err != nil {
-				client.handler.ChangePinFailure(schemeID, err)
-				return
-			}
-			if !success {
-				if attempts > 0 {
-					client.handler.ChangePinIncorrect(schemeID, attempts)
-				} else {
-					client.handler.ChangePinBlocked(schemeID, blocked)
-				}
-				return
-			}
-		}
-
-		// Change the PIN across all keyshare servers.
-		var updatedSchemes []irma.SchemeManagerIdentifier
-		var err error
-		for schemeID, kss := range client.keyshareServers {
-			if kss.PinOutOfSync {
-				continue
-			}
-
-			err = client.keyshareChangePinWorker(schemeID, oldPin, newPin)
-			if err != nil {
-				client.handler.ChangePinFailure(schemeID, err)
-				break
-			}
-
-			updatedSchemes = append(updatedSchemes, schemeID)
-		}
-
-		// If an error occurred, try to undo all changes we already made. In case this fails,
-		// we set the PinOutOfSync flag for that particular enrollment.
-		if err != nil {
-			pinOutOfSync := false
-			for _, updatedManager := range updatedSchemes {
-				err = client.keyshareChangePinWorker(updatedManager, newPin, oldPin)
-				if err != nil {
-					client.reportError(err)
-					client.keyshareServers[updatedManager].PinOutOfSync = true
-					pinOutOfSync = true
-				}
-			}
-			if pinOutOfSync {
-				err = client.storage.StoreKeyshareServers(client.keyshareServers)
-				if err != nil {
-					client.reportError(err)
-				}
-			}
-			return
-		}
-
-		client.handler.ChangePinSuccess()
-	}()
-}
-
-func (client *Client) keyshareChangePinWorker(managerID irma.SchemeManagerIdentifier, oldPin string, newPin string) error {
-	kss, ok := client.keyshareServers[managerID]
-	if !ok {
-		return errors.New("Unknown keyshare server")
-	}
-
-	transport := irma.NewHTTPTransport(client.Configuration.SchemeManagers[managerID].KeyshareServer, !client.Preferences.DeveloperMode)
-
-	claims := irma.KeyshareChangePinClaims{
-		KeyshareChangePinData: irma.KeyshareChangePinData{
-			Username: kss.Username,
-			OldPin:   kss.HashedPin(oldPin),
-			NewPin:   kss.HashedPin(newPin),
-		},
-	}
-	jwtt, err := SignerCreateJWT(client.signer, challengeResponseKeyName(managerID), claims)
-	if err != nil {
-		return err
-	}
-
-	res := &irma.KeysharePinStatus{}
-	err = transport.Post("users/change/pin", res, irma.KeyshareChangePin{
-		ChangePinJWT: jwtt,
-	})
-	if err != nil {
-		return err
-	}
-
-	switch res.Status {
-	case kssPinSuccess:
-		// The cached authorization token is invalid now, so we have to refresh this.
-		ok, _, _, err = client.KeyshareVerifyPin(newPin, managerID)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			return errors.Errorf("keyshare authorization token could not be refreshed for scheme %s", managerID)
-		}
-		return nil
-	case kssPinFailure:
-		return errors.Errorf("incorrect PIN for scheme %s", managerID)
-	case kssPinError:
-		return errors.Errorf("user account is blocked for scheme %s", managerID)
-	default:
-		return errors.Errorf("unknown keyshare response for scheme %s", managerID)
-	}
-}
-
-// KeyshareRemove unenrolls the keyshare server of the specified scheme manager and removes all associated credentials.
-func (client *Client) KeyshareRemove(manager irma.SchemeManagerIdentifier) error {
-	if _, contains := client.keyshareServers[manager]; !contains {
-		return errors.New("can't uninstall unknown keyshare server")
-	}
-	return client.stripStorage([]irma.SchemeManagerIdentifier{manager}, false)
-}
-
-// KeyshareRemoveAll removes all keyshare server registrations and associated credentials.
-func (client *Client) KeyshareRemoveAll() error {
-	var managers []irma.SchemeManagerIdentifier
-	for schemeID := range client.keyshareServers {
-		managers = append(managers, schemeID)
-	}
-	return client.stripStorage(managers, false)
 }
 
 // stripStorage removes all credentials and optionally removes all logs of the specified schemes from storage.
@@ -1391,7 +1076,6 @@ func (client *Client) stripStorage(schemeIDs []irma.SchemeManagerIdentifier, rem
 		remainingSchemes[schemeID] = struct{}{}
 	}
 	for _, schemeID := range schemeIDs {
-		delete(client.keyshareServers, schemeID)
 		delete(remainingSchemes, schemeID)
 	}
 
@@ -1441,36 +1125,8 @@ func (client *Client) stripStorage(schemeIDs []irma.SchemeManagerIdentifier, rem
 				return err
 			}
 		}
-
-		return client.storage.TxStoreKeyshareServers(tx, client.keyshareServers)
+		return nil
 	})
-}
-
-func (client *Client) ensureKeyshareAttributeValid(pin string, kss *keyshareServer, transport *irma.HTTPTransport) {
-	// The user has no way to deal with the errors that may occur here, so we just report them and return.
-	manager := client.Configuration.SchemeManagers[kss.SchemeManagerIdentifier]
-	attrs := client.Attributes(irma.NewAttributeTypeIdentifier(manager.KeyshareAttribute).CredentialTypeIdentifier(), 0)
-	if attrs == nil {
-		client.reportError(errors.New("keyshare attribute not present"))
-		return
-	}
-	// Renew the keyshare attribute if it expires within a month.
-	if attrs.MetadataAttribute.Expiry().Before(time.Now().AddDate(0, 1, 0)) {
-		qr := &irma.Qr{}
-		if err := transport.Get("users/renewKeyshareAttribute", &qr); err != nil {
-			client.reportError(err)
-			return
-		}
-		handler := &backgroundIssuanceHandler{
-			pin:       pin,
-			resultErr: make(chan error),
-		}
-		client.newQrSession(qr, handler)
-		if err := <-handler.resultErr; err != nil {
-			client.reportError(err)
-			return
-		}
-	}
 }
 
 // Add, load and store log entries
@@ -1533,7 +1189,14 @@ func (client *Client) ConfigurationUpdated(downloaded *irma.IrmaIdentifierSet) e
 			if cred == nil {
 				return nil
 			}
-			cred.Attributes = append(cred.Attributes[:1], attrs...)
+
+			var gabiAttributes []*gabi.Attribute
+
+			for i := range attrs {
+				gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attrs[i].Bytes()})
+			}
+
+			cred.Attributes = append(cred.Attributes[:1], gabiAttributes...)
 		}
 	}
 

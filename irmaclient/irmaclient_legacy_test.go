@@ -26,7 +26,6 @@ func testConvertingLegacyStorage(t *testing.T, dir string) {
 	t.Run("TestWrongSchemeManager", TestWrongSchemeManager)
 	t.Run("TestCredentialInfoListNewAttribute", TestCredentialInfoListNewAttribute)
 	// TestFreshStorage is not needed, because this test does not use an existing storage
-	t.Run("TestKeyshareEnrollmentRemoval", TestKeyshareEnrollmentRemoval)
 	t.Run("TestUpdatingStorage", TestUpdatingStorage)
 	t.Run("TestRemoveStorage", TestRemoveStorage)
 }

@@ -299,7 +299,6 @@ type DisclosedAttributeIndex struct {
 }
 
 type IssueCommitmentMessage struct {
-	Proofs  *gabi.DisclosureProof
 	Indices DisclosedAttributeIndices `json:"indices,omitempty"`
 }
 
@@ -476,7 +475,6 @@ func (e *SessionError) Stack() string {
 
 func (i *IssueCommitmentMessage) Disclosure() *Disclosure {
 	return &Disclosure{
-		Proofs:  *i.Proofs,
 		Indices: i.Indices,
 	}
 }
@@ -534,9 +532,9 @@ func (status ServerStatus) Finished() bool {
 }
 
 type ServerSessionResponse struct {
-	ProofStatus     ProofStatus        `json:"proofStatus"`
-	IssueSignatures []*gabi.Credential `json:"sigs,omitempty"`
-	NextSession     *Qr                `json:"nextSession,omitempty"`
+	ProofStatus     ProofStatus            `json:"proofStatus"`
+	IssueSignatures []*gabi.ZkDilSignature `json:"sigs,omitempty"`
+	NextSession     *Qr                    `json:"nextSession,omitempty"`
 
 	// needed for legacy (un)marshaling
 	ProtocolVersion *ProtocolVersion `json:"-"`

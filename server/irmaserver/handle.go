@@ -8,6 +8,7 @@ import (
 	"time"
 
 	gabi "github.com/AVecsi/pq-gabi"
+	"github.com/AVecsi/pq-gabi/gabikeys"
 	irma "github.com/AVecsi/pq-irmago"
 	"github.com/AVecsi/pq-irmago/internal/common"
 	"github.com/AVecsi/pq-irmago/server"
@@ -153,18 +154,8 @@ func (session *sessionData) handlePostCommitments(commitments *irma.IssueCommitm
 	session.markAlive(conf)
 	request := session.Rrequest.SessionRequest().(*irma.IssuanceRequest)
 
-	discloseCount := len(commitments.Proofs.CredentialDisclosures) - len(request.Credentials)
-	if discloseCount < 0 {
-		return nil, session.fail(server.ErrorMalformedInput, "Received insufficient proofs", conf)
-	}
-
 	// Compute list of public keys against which to verify the received proofs
-	disclosureproofs := irma.ProofList(*commitments.Proofs)
-	pubkeys, err := disclosureproofs.ExtractPublicKeys(conf.IrmaConfiguration)
-	pubkeys = pubkeys[:discloseCount]
-	if err != nil {
-		return nil, session.fail(server.ErrorMalformedInput, err.Error(), conf)
-	}
+	var pubkeys = []*gabikeys.PublicKey{}
 	for _, cred := range request.Credentials {
 		iss := cred.CredentialTypeID.IssuerIdentifier()
 		pubkey, _ := conf.IrmaConfiguration.PublicKey(iss, cred.KeyCounter) // No error, already checked earlier
@@ -173,6 +164,7 @@ func (session *sessionData) handlePostCommitments(commitments *irma.IssueCommitm
 
 	// Verify all proofs and check disclosed attributes, if any, against request
 	now := time.Now()
+	var err error
 	request.Disclose = append(request.Disclose, session.ImplicitDisclosure...)
 	session.Result.Disclosed, session.Result.ProofStatus, err = commitments.Disclosure().VerifyAgainstRequest(
 		conf.IrmaConfiguration, request, request.GetContext(), request.GetNonce(nil), pubkeys, &now, false,
@@ -192,27 +184,22 @@ func (session *sessionData) handlePostCommitments(commitments *irma.IssueCommitm
 	}
 
 	// Compute CL signatures
-	var sigs []*gabi.Credential
-	for i, cred := range request.Credentials {
+	var sigs []*gabi.ZkDilSignature
+	for _, cred := range request.Credentials {
 		id := cred.CredentialTypeID.IssuerIdentifier()
 		pk, _ := conf.IrmaConfiguration.PublicKey(id, cred.KeyCounter)
 		sk, _ := conf.IrmaConfiguration.PrivateKeys.Latest(id)
 		issuer := gabi.NewIssuer(sk, pk, one)
-		proof := commitments.Proofs.CredentialDisclosures[i+discloseCount].DisclosedAttributes[0].IntValue()
 		attrs, err := session.computeAttributes(sk, cred, conf)
 		if err != nil {
 			return nil, session.fail(server.ErrorIssuanceFailed, err.Error(), conf)
 		}
 		//rb := conf.IrmaConfiguration.CredentialTypes[cred.CredentialTypeID].RandomBlindAttributeIndices()
-		sig, attrTreeRoot, err := issuer.IssueSignature(proof, attrs)
+		sig, _, err := issuer.IssueSignature(nil, attrs)
 		if err != nil {
 			return nil, session.fail(server.ErrorIssuanceFailed, err.Error(), conf)
 		}
-		sigs = append(sigs, &gabi.Credential{
-			Signature:    sig,
-			Attributes:   attrs,
-			AttrTreeRoot: attrTreeRoot},
-		)
+		sigs = append(sigs, sig)
 	}
 
 	return &irma.ServerSessionResponse{

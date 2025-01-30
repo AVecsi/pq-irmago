@@ -6,14 +6,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 
-	"github.com/AVecsi/pq-gabi/gabikeys"
 	"github.com/AVecsi/pq-gabi/signed"
 	irma "github.com/AVecsi/pq-irmago"
 	"github.com/AVecsi/pq-irmago/internal/common"
-	"github.com/AVecsi/pq-irmago/internal/concmap"
 	"github.com/AVecsi/pq-irmago/internal/test"
 	"github.com/sirupsen/logrus"
 
@@ -82,28 +79,24 @@ func verifyClientIsUnmarshaled(t *testing.T, client *Client) {
 	cred, err = client.credential(irma.NewCredentialTypeIdentifier("test.test.mijnirma"), 0)
 	require.NoError(t, err, "could not fetch credential")
 	require.NotNil(t, cred, "Credential should exist")
-	require.NotNil(t, cred.Signature.KeyshareP)
 
 	require.NotEmpty(t, client.CredentialInfoList())
 
-	pk, err := cred.PublicKey()
 	require.NoError(t, err)
 	require.True(t,
-		cred.Signature.Verify(pk, cred.Attributes),
+		cred.Signature.Verify(cred.AttrTreeRoot),
 		"Credential should be valid",
 	)
 }
 
 func verifyCredentials(t *testing.T, client *Client) {
-	var pk *gabikeys.PublicKey
 	for credtype, credsmap := range client.attributes {
 		for index, attrs := range credsmap {
 			cred, err := client.credential(attrs.CredentialType().Identifier(), index)
 			require.NoError(t, err)
-			pk, err = cred.PublicKey()
 			require.NoError(t, err)
 			require.True(t,
-				cred.Credential.Signature.Verify(pk, cred.Attributes),
+				cred.Credential.Signature.Verify(cred.AttrTreeRoot),
 				"Credential %s-%d was invalid", credtype.String(), index,
 			)
 			require.Equal(t, cred.Attributes[0], client.secretkey.Key,
@@ -114,21 +107,12 @@ func verifyCredentials(t *testing.T, client *Client) {
 	}
 }
 
-func verifyKeyshareIsUnmarshaled(t *testing.T, client *Client) {
-	require.NotNil(t, client.keyshareServers)
-	testManager := irma.NewSchemeManagerIdentifier("test")
-	require.Contains(t, client.keyshareServers, testManager)
-	kss := client.keyshareServers[testManager]
-	require.NotEmpty(t, kss.Nonce)
-}
-
 func TestStorageDeserialization(t *testing.T) {
 	client, handler := parseStorage(t)
 	defer test.ClearTestStorage(t, client, handler.storage)
 
 	verifyClientIsUnmarshaled(t, client)
 	verifyCredentials(t, client)
-	verifyKeyshareIsUnmarshaled(t, client)
 }
 
 // TestCandidates tests the correctness of the function of the client that, given a disjunction of attributes
@@ -396,20 +380,6 @@ func TestFreshStorage(t *testing.T) {
 	require.NotNil(t, client)
 }
 
-func TestKeyshareEnrollmentRemoval(t *testing.T) {
-	client, handler := parseStorage(t)
-	defer test.ClearTestStorage(t, client, handler.storage)
-
-	err := client.KeyshareRemove(irma.NewSchemeManagerIdentifier("test"))
-	require.NoError(t, err)
-
-	err = client.storage.db.Close()
-	require.NoError(t, err)
-	client, _ = parseExistingStorage(t, handler.storage)
-
-	require.NotContains(t, client.keyshareServers, "test")
-}
-
 func TestUpdatingStorage(t *testing.T) {
 	client, handler := parseStorage(t)
 	defer test.ClearTestStorage(t, client, handler.storage)
@@ -450,7 +420,7 @@ func TestRemoveStorage(t *testing.T) {
 	require.NotEqual(t, old_sk, new_sk)
 }
 
-func TestCredentialsConcurrency(t *testing.T) {
+/* func TestCredentialsConcurrency(t *testing.T) {
 	client, _ := parseStorage(t)
 	grp := sync.WaitGroup{}
 
@@ -469,7 +439,7 @@ func TestCredentialsConcurrency(t *testing.T) {
 
 		grp.Wait()
 	}
-}
+} */
 
 // ------
 

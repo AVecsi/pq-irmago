@@ -3,10 +3,11 @@ module github.com/AVecsi/pq-irmago
 go 1.23.2
 
 require (
-	github.com/AVecsi/pq-gabi v0.0.0-20250127094051-c3d4c53756da
+	github.com/AVecsi/pq-gabi v0.0.0-20250128121725-3eed2922587d
 	github.com/alexandrevicenzi/go-sse v1.6.0
 	github.com/alicebob/miniredis/v2 v2.33.0
 	github.com/bwesterb/go-atum v1.1.5
+	github.com/cbergoon/merkletree v0.2.0
 	github.com/eknkc/basex v1.0.1
 	github.com/fxamacker/cbor v1.5.1
 	github.com/go-chi/chi/v5 v5.2.0
@@ -35,7 +36,6 @@ require (
 	github.com/bwesterb/byteswriter v1.0.0 // indirect
 	github.com/bwesterb/go-pow v1.0.0 // indirect
 	github.com/bwesterb/go-xmssmt v1.5.2 // indirect
-	github.com/cbergoon/merkletree v0.2.0 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect

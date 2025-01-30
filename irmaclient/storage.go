@@ -10,7 +10,6 @@ import (
 	"time"
 
 	gabi "github.com/AVecsi/pq-gabi"
-	"github.com/AVecsi/pq-gabi/revocation"
 	irma "github.com/AVecsi/pq-irmago"
 	"github.com/AVecsi/pq-irmago/internal/common"
 
@@ -47,7 +46,7 @@ const (
 
 	attributesBucket = "attrs" // Key: []byte, value: []*irma.AttributeList
 	logsBucket       = "logs"  // Key: (auto-increment index), value: *LogEntry
-	signaturesBucket = "sigs"  // Key: credential.attrs.Hash, value: *gabi.CLSignature
+	signaturesBucket = "sigs"  // Key: credential.attrs.Hash, value: *gabi.ZkDilSignature
 )
 
 func (s *storage) path(p string) string {
@@ -148,9 +147,8 @@ func (s *storage) TxDeleteAllSignatures(tx *transaction) error {
 	return tx.DeleteBucket([]byte(signaturesBucket))
 }
 
-type clSignatureWitness struct {
-	*gabi.CLSignature
-	Witness *revocation.Witness
+type zkDilSignatureWitness struct {
+	*gabi.ZkDilSignature
 }
 
 func (s *storage) StoreSignature(cred *credential) error {
@@ -160,13 +158,12 @@ func (s *storage) StoreSignature(cred *credential) error {
 }
 
 func (s *storage) TxStoreSignature(tx *transaction, cred *credential) error {
-	return s.TxStoreCLSignature(tx, cred.attrs.Hash(), &clSignatureWitness{
-		CLSignature: cred.Signature,
-		Witness:     cred.NonRevocationWitness,
+	return s.TxStoreZkDilSignature(tx, cred.attrs.Hash(), &zkDilSignatureWitness{
+		ZkDilSignature: cred.Signature,
 	})
 }
 
-func (s *storage) TxStoreCLSignature(tx *transaction, credHash string, sig *clSignatureWitness) error {
+func (s *storage) TxStoreZkDilSignature(tx *transaction, credHash string, sig *zkDilSignatureWitness) error {
 	// We take the SHA256 hash over all attributes as the bucket key for the signature.
 	// This means that of the signatures of two credentials that have identical attributes
 	// only one gets stored, one overwriting the other - but that doesn't
@@ -267,16 +264,6 @@ func (s *storage) TxDeleteAllAttributes(tx *transaction) error {
 	return s.txDelete(tx, userdataBucket, credTypeKeysKey)
 }
 
-func (s *storage) StoreKeyshareServers(keyshareServers map[irma.SchemeManagerIdentifier]*keyshareServer) error {
-	return s.Transaction(func(tx *transaction) error {
-		return s.TxStoreKeyshareServers(tx, keyshareServers)
-	})
-}
-
-func (s *storage) TxStoreKeyshareServers(tx *transaction, keyshareServers map[irma.SchemeManagerIdentifier]*keyshareServer) error {
-	return s.txStore(tx, userdataBucket, kssKey, keyshareServers)
-}
-
 func (s *storage) AddLogEntry(entry *LogEntry) error {
 	return s.db.Update(func(tx *bbolt.Tx) error {
 		return s.TxAddLogEntry(&transaction{tx}, entry)
@@ -333,35 +320,23 @@ func (s *storage) TxStoreUpdates(tx *transaction, updates []update) error {
 	return s.txStore(tx, userdataBucket, updatesKey, updates)
 }
 
-func (s *storage) LoadSignature(attrs *irma.AttributeList) (*gabi.CLSignature, *revocation.Witness, error) {
+func (s *storage) LoadSignature(attrs *irma.AttributeList) (*gabi.ZkDilSignature, error) {
 	credType := attrs.CredentialType()
 	if credType == nil {
-		return nil, nil, errors.New("credential not known in configuration")
+		return nil, errors.New("credential not known in configuration")
 	}
 	if _, ok := s.Configuration.DisabledSchemeManagers[credType.SchemeManagerIdentifier()]; ok {
-		return nil, nil, errors.Errorf("scheme %s is disabled", credType.SchemeManagerIdentifier())
+		return nil, errors.Errorf("scheme %s is disabled", credType.SchemeManagerIdentifier())
 	}
 
-	sig := new(clSignatureWitness)
+	sig := new(zkDilSignatureWitness)
 	found, err := s.load(signaturesBucket, attrs.Hash(), sig)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	} else if !found {
-		return nil, nil, errors.Errorf("signature of credential with hash %s cannot be found", attrs.Hash())
+		return nil, errors.Errorf("signature of credential with hash %s cannot be found", attrs.Hash())
 	}
-	if sig.Witness != nil {
-		pk, err := s.Configuration.Revocation.Keys.PublicKey(
-			credType.IssuerIdentifier(),
-			sig.Witness.SignedAccumulator.PKCounter,
-		)
-		if err != nil {
-			return nil, nil, err
-		}
-		if err = sig.Witness.Verify(pk); err != nil {
-			return nil, nil, err
-		}
-	}
-	return sig.CLSignature, sig.Witness, nil
+	return sig.ZkDilSignature, nil
 }
 
 // LoadSecretKey retrieves and returns the secret key from bbolt storage, or if no secret key
@@ -423,23 +398,6 @@ func (s *storage) LoadAttributes() (list map[irma.CredentialTypeIdentifier][]*ir
 			return nil
 		})
 	})
-}
-
-func (s *storage) LoadKeyshareServers() (ksses map[irma.SchemeManagerIdentifier]*keyshareServer, err error) {
-	ksses = make(map[irma.SchemeManagerIdentifier]*keyshareServer)
-	_, err = s.load(userdataBucket, kssKey, &ksses)
-	if err != nil {
-		return
-	}
-	for schemeID := range ksses {
-		if schemeManager, ok := s.Configuration.SchemeManagers[schemeID]; !ok || !schemeManager.Distributed() {
-			return nil, errors.Errorf("scheme %s not known in configuration", schemeManager.Identifier())
-		}
-		if _, ok := s.Configuration.DisabledSchemeManagers[schemeID]; ok {
-			return nil, errors.Errorf("scheme %s is disabled", schemeID)
-		}
-	}
-	return
 }
 
 // Returns all logs stored before log with ID 'index' sorted from new to old with

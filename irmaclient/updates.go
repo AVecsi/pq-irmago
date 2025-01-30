@@ -5,6 +5,7 @@ import (
 	"time"
 
 	gabi "github.com/AVecsi/pq-gabi"
+	"github.com/cbergoon/merkletree"
 	"go.etcd.io/bbolt"
 
 	irma "github.com/AVecsi/pq-irmago"
@@ -99,23 +100,17 @@ var clientUpdates = []func(client *Client) error{
 			return err
 		}
 
-		sigs := make(map[string]*clSignatureWitness)
+		sigs := make(map[string]*zkDilSignatureWitness)
 		for _, attrlistlist := range attrs {
 			for _, attrlist := range attrlistlist {
-				sig, witness, err := fileStorage.LoadSignature(attrlist)
+				sig, err := fileStorage.LoadSignature(attrlist)
 				if err != nil {
 					return err
 				}
-				sigs[attrlist.Hash()] = &clSignatureWitness{
-					CLSignature: sig,
-					Witness:     witness,
+				sigs[attrlist.Hash()] = &zkDilSignatureWitness{
+					ZkDilSignature: sig,
 				}
 			}
-		}
-
-		ksses, err := fileStorage.LoadKeyshareServers()
-		if err != nil {
-			return err
 		}
 
 		prefs, err := fileStorage.LoadPreferences()
@@ -148,13 +143,10 @@ var clientUpdates = []func(client *Client) error{
 				}
 			}
 			for hash, sig := range sigs {
-				err = storageOld.TxStoreCLSignature(tx, hash, sig)
+				err = storageOld.TxStoreZkDilSignature(tx, hash, sig)
 				if err != nil {
 					return err
 				}
-			}
-			if err = storageOld.TxStoreKeyshareServers(tx, ksses); err != nil {
-				return err
 			}
 			if err = storageOld.TxStorePreferences(tx, prefs); err != nil {
 				return err
@@ -278,10 +270,6 @@ var clientUpdates = []func(client *Client) error{
 		if err != nil {
 			return err
 		}
-		kss, err := storageOld.LoadKeyshareServers()
-		if err != nil {
-			return err
-		}
 		attrs, err := storageOld.LoadAttributes()
 		if err != nil {
 			return err
@@ -310,10 +298,6 @@ var clientUpdates = []func(client *Client) error{
 			if err != nil {
 				return err
 			}
-			err = client.storage.TxStoreKeyshareServers(tx, kss)
-			if err != nil {
-				return err
-			}
 
 			for credid, attrlistlist := range attrs {
 				err = client.storage.TxStoreAttributes(tx, credid, attrlistlist)
@@ -322,12 +306,25 @@ var clientUpdates = []func(client *Client) error{
 				}
 
 				for _, attrlist := range attrlistlist {
-					e, h, err := storageOld.LoadSignature(attrlist)
+					e, err := storageOld.LoadSignature(attrlist)
 					if err != nil {
 						return err
 					}
 
-					cred := &credential{attrs: attrlist, Credential: &gabi.Credential{Signature: e, NonRevocationWitness: h}}
+					var gabiAttributes []*gabi.Attribute
+					var merkleLeaves []merkletree.Content
+
+					for i := range attrlist.Ints {
+						gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attrlist.Ints[i].Bytes()})
+						merkleLeaves = append(merkleLeaves, gabi.Attribute{Value: attrlist.Ints[i].Bytes()})
+					}
+
+					merkleTree, err := merkletree.NewTreeWithHashStrategy(merkleLeaves, gabi.HashStrategy)
+					if err != nil {
+						return err
+					}
+
+					cred := &credential{attrs: attrlist, Credential: &gabi.Credential{Signature: e, Attributes: gabiAttributes, AttrTreeRoot: merkleTree.MerkleRoot()}}
 					err = client.storage.TxStoreSignature(tx, cred)
 					if err != nil {
 						return err

@@ -10,7 +10,6 @@ import (
 	"go.etcd.io/bbolt"
 
 	gabi "github.com/AVecsi/pq-gabi"
-	"github.com/AVecsi/pq-gabi/revocation"
 	irma "github.com/AVecsi/pq-irmago"
 	"github.com/AVecsi/pq-irmago/internal/common"
 
@@ -107,7 +106,7 @@ func (s *storageOld) TxDeleteAllSignatures(tx *transaction) error {
 	return tx.DeleteBucket([]byte(signaturesBucket))
 }
 
-func (s *storageOld) TxStoreCLSignature(tx *transaction, credHash string, sig *clSignatureWitness) error {
+func (s *storageOld) TxStoreZkDilSignature(tx *transaction, credHash string, sig *zkDilSignatureWitness) error {
 	// We take the SHA256 hash over all attributes as the bucket key for the signature.
 	// This means that of the signatures of two credentials that have identical attributes
 	// only one gets stored, one overwriting the other - but that doesn't
@@ -138,16 +137,6 @@ func (s *storageOld) TxStoreAttributes(tx *transaction, credTypeID irma.Credenti
 
 func (s *storageOld) TxDeleteAllAttributes(tx *transaction) error {
 	return tx.DeleteBucket([]byte(attributesBucket))
-}
-
-func (s *storageOld) StoreKeyshareServers(keyshareServers map[irma.SchemeManagerIdentifier]*keyshareServer) error {
-	return s.Transaction(func(tx *transaction) error {
-		return s.TxStoreKeyshareServers(tx, keyshareServers)
-	})
-}
-
-func (s *storageOld) TxStoreKeyshareServers(tx *transaction, keyshareServers map[irma.SchemeManagerIdentifier]*keyshareServer) error {
-	return s.txStore(tx, userdataBucket, kssKey, keyshareServers)
 }
 
 func (s *storageOld) TxAddLogEntry(tx *transaction, entry *LogEntry) error {
@@ -188,35 +177,23 @@ func (s *storageOld) TxStoreUpdates(tx *transaction, updates []update) error {
 	return s.txStore(tx, userdataBucket, updatesKey, updates)
 }
 
-func (s *storageOld) LoadSignature(attrs *irma.AttributeList) (*gabi.CLSignature, *revocation.Witness, error) {
+func (s *storageOld) LoadSignature(attrs *irma.AttributeList) (*gabi.ZkDilSignature, error) {
 	credType := attrs.CredentialType()
 	if credType == nil {
-		return nil, nil, errors.New("credential not known in configuration")
+		return nil, errors.New("credential not known in configuration")
 	}
 	if _, ok := s.Configuration.DisabledSchemeManagers[credType.SchemeManagerIdentifier()]; ok {
-		return nil, nil, errors.Errorf("scheme %s is disabled", credType.SchemeManagerIdentifier())
+		return nil, errors.Errorf("scheme %s is disabled", credType.SchemeManagerIdentifier())
 	}
 
-	sig := new(clSignatureWitness)
+	sig := new(zkDilSignatureWitness)
 	found, err := s.load(signaturesBucket, attrs.Hash(), sig)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	} else if !found {
-		return nil, nil, errors.Errorf("signature of credential with hash %s cannot be found", attrs.Hash())
+		return nil, errors.Errorf("signature of credential with hash %s cannot be found", attrs.Hash())
 	}
-	if sig.Witness != nil {
-		pk, err := s.Configuration.Revocation.Keys.PublicKey(
-			credType.IssuerIdentifier(),
-			sig.Witness.SignedAccumulator.PKCounter,
-		)
-		if err != nil {
-			return nil, nil, err
-		}
-		if err = sig.Witness.Verify(pk); err != nil {
-			return nil, nil, err
-		}
-	}
-	return sig.CLSignature, sig.Witness, nil
+	return sig.ZkDilSignature, nil
 }
 
 // LoadSecretKey retrieves and returns the secret key from bbolt storageOld, or if no secret key
@@ -266,23 +243,6 @@ func (s *storageOld) LoadAttributes() (list map[irma.CredentialTypeIdentifier][]
 			return nil
 		})
 	})
-}
-
-func (s *storageOld) LoadKeyshareServers() (ksses map[irma.SchemeManagerIdentifier]*keyshareServer, err error) {
-	ksses = make(map[irma.SchemeManagerIdentifier]*keyshareServer)
-	_, err = s.load(userdataBucket, kssKey, &ksses)
-	if err != nil {
-		return
-	}
-	for schemeID := range ksses {
-		if _, ok := s.Configuration.DisabledSchemeManagers[schemeID]; ok {
-			return ksses, errors.Errorf("scheme %s is disabled", schemeID)
-		}
-		if schemeManager, ok := s.Configuration.SchemeManagers[schemeID]; !ok || !schemeManager.Distributed() {
-			return ksses, errors.Errorf("scheme %s not known in configuration", schemeManager.Identifier())
-		}
-	}
-	return
 }
 
 func (s *storageOld) loadLogs() ([]*LogEntry, error) {
@@ -420,16 +380,16 @@ func (f *fileStorage) signatureFilename(attrs *irma.AttributeList) string {
 	return filepath.Join(signaturesDir, attrs.Hash())
 }
 
-func (f *fileStorage) LoadSignature(attrs *irma.AttributeList) (signature *gabi.CLSignature, witness *revocation.Witness, err error) {
+func (f *fileStorage) LoadSignature(attrs *irma.AttributeList) (signature *gabi.ZkDilSignature, err error) {
 	sigpath := f.signatureFilename(attrs)
 	if err := common.AssertPathExists(f.path(sigpath)); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	sig := &clSignatureWitness{}
+	sig := &zkDilSignatureWitness{}
 	if err := f.load(sig, sigpath); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return sig.CLSignature, sig.Witness, nil
+	return sig.ZkDilSignature, nil
 }
 
 // LoadSecretKey retrieves and returns the secret key from file storage. When no secret key
@@ -474,14 +434,6 @@ func (f *fileStorage) LoadAttributes() (list map[irma.CredentialTypeIdentifier][
 	return list, nil
 }
 
-func (f *fileStorage) LoadKeyshareServers() (ksses map[irma.SchemeManagerIdentifier]*keyshareServer, err error) {
-	ksses = make(map[irma.SchemeManagerIdentifier]*keyshareServer)
-	if err := f.load(&ksses, kssFile); err != nil {
-		return nil, err
-	}
-	return ksses, nil
-}
-
 func (f *fileStorage) LoadUpdates() (updates []update, err error) {
 	updates = []update{}
 	if err := f.load(&updates, updatesFile); err != nil {
@@ -516,59 +468,4 @@ func (f *fileStorage) DeleteAll() error {
 	}
 
 	return nil
-}
-
-// registerPublicKey registers our public key used in the ECDSA challenge-response
-// sub-protocol part of the keyshare protocol at the keyshare server.
-func (kss *keyshareServer) registerPublicKey(client *Client, transport *irma.HTTPTransport, pin string) (*irma.KeysharePinStatus, error) {
-	keyname := challengeResponseKeyName(kss.SchemeManagerIdentifier)
-
-	pk, err := client.signer.PublicKey(keyname)
-	if err != nil {
-		return nil, err
-	}
-	jwtt, err := SignerCreateJWT(client.signer, keyname, irma.KeyshareKeyRegistrationClaims{
-		KeyshareKeyRegistrationData: irma.KeyshareKeyRegistrationData{
-			Username:  kss.Username,
-			Pin:       kss.HashedPin(pin),
-			PublicKey: pk,
-		},
-	})
-	if err != nil {
-		err = irma.WrapErrorPrefix(err, "failed to sign public key registration JWT")
-		return nil, err
-	}
-
-	result := &irma.KeysharePinStatus{}
-	err = transport.Post("users/register_publickey", result, irma.KeyshareKeyRegistration{PublicKeyRegistrationJWT: jwtt})
-	if err != nil {
-		err = irma.WrapErrorPrefix(err, "failed to register public key")
-		return nil, err
-	}
-
-	if result.Status == kssPinSuccess {
-		// We leave dealing with any other case up to the calling code
-		kss.ChallengeResponse = true
-		err = client.storage.StoreKeyshareServers(client.keyshareServers)
-		if err != nil {
-			err = irma.WrapErrorPrefix(err, "failed to store updated keyshare server")
-			return nil, err
-		}
-	}
-
-	return result, nil
-}
-
-// removeKeysharePsFromProofUs fixes a difference in gabi between the old keyshare protocol and
-// the new one. In the old one, during issuance the client sends a proof of knowledge only of its
-// own keyshare to the issuer. In the new one, it sends a proof of knowledge of the full secret.
-// Therefore, the proofU contains a PoK over the full secret, while in case of the old keyshare
-// protocol, the issuer expects a PoK only of the user's keyshare. This method removes the
-// keyshare server's contribution for use in the old keyshare protocol.
-func (ks *keyshareSession) removeKeysharePsFromProofUs(proofs gabi.ProofList) {
-	for i, proof := range proofs {
-		if proofU, ok := proof.(*gabi.ProofU); ok {
-			proofU.RemoveKeyshareP(ks.builders[i].(*gabi.CredentialBuilder))
-		}
-	}
 }

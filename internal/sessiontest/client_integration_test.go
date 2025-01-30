@@ -25,7 +25,6 @@ import (
 	"strings"
 	"testing"
 
-	irma "github.com/AVecsi/pq-irmago"
 	"github.com/AVecsi/pq-irmago/internal/test"
 )
 
@@ -67,7 +66,6 @@ func TestClientIntegration(t *testing.T) {
 		defer test.ClearTestStorage(t, client, handler.storage)
 
 		// Fresh irmaclient storage was used, so we need to do some initialization.
-		client.KeyshareEnroll(irma.NewSchemeManagerIdentifier("test"), nil, "12345", "en")
 		req := getIssuanceRequest(false)
 		doSession(t, req, client, nil, nil, nil, nil, optionReuseServer, optionForceNoAuth)
 

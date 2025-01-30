@@ -154,10 +154,10 @@ func (session *sessionData) computeAttributes(
 		return nil, err
 	}
 
-	gabiAttributes := make([]*gabi.Attribute, len(attributes.Ints))
+	var gabiAttributes []*gabi.Attribute
 
 	for i := range attributes.Ints {
-		gabiAttributes[i].Value = attributes.Ints[i].Bytes()
+		gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attributes.Ints[i].Bytes()})
 	}
 
 	return gabiAttributes, nil
