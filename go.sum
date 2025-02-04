@@ -1,5 +1,5 @@
-github.com/AVecsi/pq-gabi v0.0.0-20250204111143-0441ecccd47a h1:amFknEcUsl4I7NoFlBAcLp4IHxnQ9ozqWkVCyZii4sY=
-github.com/AVecsi/pq-gabi v0.0.0-20250204111143-0441ecccd47a/go.mod h1:trcQGQ6akPRBDJxgZvDX7MXjkvYfuliQkWfXYKhaJRw=
+github.com/AVecsi/pq-gabi v0.0.0-20250204112103-02aad92b065f h1:ESKzOM4KVm24MXEZ10xg6v1cbNeqmm0TbwGTmhhz5nQ=
+github.com/AVecsi/pq-gabi v0.0.0-20250204112103-02aad92b065f/go.mod h1:trcQGQ6akPRBDJxgZvDX7MXjkvYfuliQkWfXYKhaJRw=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/alexandrevicenzi/go-sse v1.6.0 h1:3KvOzpuY7UrbqZgAtOEmub9/V5ykr7Myudw+PA+H1Ik=
