@@ -1260,7 +1260,7 @@ func (dcs DisclosureCandidates) Choose() ([]*irma.AttributeIdentifier, error) {
 			return nil, errors.New("cannot choose revoked credential")
 		}
 		if attr.NotRevokable {
-			return nil, errors.New("credential does not support revocation")
+			//return nil, errors.New("credential does not support revocation")
 		}
 		ids = append(ids, attr.AttributeIdentifier)
 	}

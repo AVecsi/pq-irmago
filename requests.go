@@ -705,7 +705,7 @@ func (cr *CredentialRequest) AttributeList(
 
 	credtype := conf.CredentialTypes[cr.CredentialTypeID]
 	if !credtype.RevocationSupported() {
-		return nil, errors.Errorf("cannot specify revocationAttr: credtype %s does not support revocation", cr.CredentialTypeID.String())
+		//return nil, errors.Errorf("cannot specify revocationAttr: credtype %s does not support revocation", cr.CredentialTypeID.String())
 	}
 
 	// Compute metadata attribute
