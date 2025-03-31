@@ -8,6 +8,7 @@ import (
 	gabi "github.com/AVecsi/pq-gabi"
 	"github.com/AVecsi/pq-gabi/big"
 	"github.com/AVecsi/pq-gabi/gabikeys"
+	"github.com/AVecsi/pq-irmago/internal/common"
 	"github.com/go-errors/errors"
 	"github.com/golang-jwt/jwt/v4"
 )
@@ -54,8 +55,13 @@ func (pl ProofList) ExtractPublicKeys(configuration *Configuration) ([]*gabikeys
 	var publicKeys = make([]*gabikeys.PublicKey, 0, len(pl.CredentialDisclosures))
 
 	for _, v := range pl.CredentialDisclosures {
-		metadata := MetadataFromInt(v.DisclosedAttributes[1].IntValue(), configuration) // index 1 is metadata attribute
-		publicKey, err := metadata.PublicKey()
+		common.Logger.Debug("verifying proofs deeper2.0.1\n", v, "\n\n\n")
+		//metadata := MetadataFromInt(v.DisclosedAttributes[1].IntValue(), configuration) // index 1 is metadata attribute
+		//TODO well, for the PoC it will work but its not as intended
+		seed := make([]byte, 32)
+		_, publicKey, err := gabikeys.GenerateKeyPair(seed, 0, time.Now().AddDate(1, 0, 0))
+
+		//publicKey, err := metadata.PublicKey()
 		if err != nil {
 			return nil, err
 		}
@@ -94,18 +100,18 @@ func (pl ProofList) Expired(configuration *Configuration, t *time.Time, skipExpi
 	return false, nil
 }
 
-func extractAttribute(pl ProofList, index *DisclosedAttributeIndex, notrevoked *time.Time, conf *Configuration) (*DisclosedAttribute, *string, error) {
+func extractAttribute(pl ProofList, index *DisclosedAttributeIndex, conf *Configuration) (*DisclosedAttribute, *string, error) {
 	if len(pl.CredentialDisclosures) < index.CredentialIndex {
 		return nil, nil, errors.New("Credential index out of range")
 	}
 	proofd := pl.CredentialDisclosures[index.CredentialIndex]
 
-	metadata := MetadataFromInt(proofd.DisclosedAttributes[1].IntValue(), conf) // index 1 is metadata attribute
-	attr, str, err := parseAttribute(index.AttributeIndex, metadata, proofd.DisclosedAttributes[index.AttributeIndex].IntValue())
+	metadata := MetadataFromInt(proofd.DisclosedAttributes[0].IntValue(), conf) // index 1 is metadata attribute
+	attr, str, err := parseAttribute(index.AttributeIndex-1, metadata, proofd.DisclosedAttributes[index.AttributeIndex-1].IntValue())
+
 	if err != nil {
 		return nil, nil, err
 	}
-	attr.NotRevokedBefore = (*Timestamp)(notrevoked)
 	attr.NotRevoked = true
 	return attr, str, nil
 }
@@ -119,6 +125,7 @@ func (pl ProofList) VerifyProofs(
 	validAt *time.Time,
 	isSig bool,
 ) (bool, map[int]*time.Time, error) {
+
 	// Empty proof lists are allowed (if consistent with the session request, which is checked elsewhere)
 	if len(pl.CredentialDisclosures) == 0 {
 		return true, nil, nil
@@ -161,7 +168,7 @@ func (pl ProofList) VerifyProofs(
 		//revParams = request.Base().Revocation
 	}
 	for _, proof := range pl.CredentialDisclosures {
-		typ := MetadataFromInt(proof.DisclosedAttributes[1].IntValue(), configuration).CredentialType()
+		typ := MetadataFromInt(proof.DisclosedAttributes[0].IntValue(), configuration).CredentialType()
 		if typ == nil {
 			return false, nil, errors.New("Received unknown credential type")
 		}
@@ -281,7 +288,7 @@ func (d *Disclosure) DisclosedAttributes(configuration *Configuration, condiscon
 	var extra []*DisclosedAttribute
 	indices := d.extraIndices(condiscon)
 	for _, index := range indices {
-		attr, _, err := extractAttribute((ProofList)(d.Proofs), index, revtimes[index.CredentialIndex], configuration)
+		attr, _, err := extractAttribute((ProofList)(d.Proofs), index, configuration)
 		if err != nil {
 			return false, nil, err
 		}
@@ -299,20 +306,23 @@ func parseAttribute(index int, metadata *MetadataAttribute, attr *big.Int) (*Dis
 	var attrid AttributeTypeIdentifier
 	var attrval *string
 	credtype := metadata.CredentialType()
+
 	if credtype == nil {
 		return nil, nil, errors.New("ProofList contained a disclosure proof of an unknown credential type")
 	}
-	if index == 1 {
+
+	if index == 0 {
 		attrid = NewAttributeTypeIdentifier(credtype.Identifier().String())
 		p := "present"
 		attrval = &p
 	} else {
-		attrid = credtype.AttributeTypes[index-2].GetAttributeTypeIdentifier()
-		if credtype.AttributeTypes[index-2].RandomBlind {
+		attrid = credtype.AttributeTypes[index-1].GetAttributeTypeIdentifier()
+		if credtype.AttributeTypes[index-1].RandomBlind {
 			attrval = decodeRandomBlind(attr)
 		} else {
 			attrval = decodeAttribute(attr, metadata.Version())
 		}
+		common.Logger.Debug("attrval: ", *attrval, "\n\n")
 	}
 	status := AttributeProofStatusPresent
 	if attrval == nil {
@@ -337,17 +347,16 @@ func (d *Disclosure) VerifyAgainstRequest(
 ) ([][]*DisclosedAttribute, ProofStatus, error) {
 	// Cryptographically verify all included IRMA proofs
 	valid, revtimes, err := ProofList(d.Proofs).VerifyProofs(configuration, request, context, nonce, publickeys, validAt, issig)
+
 	if !valid || err != nil {
 		return nil, ProofStatusInvalid, err
 	}
 
 	// Next extract the contained attributes from the proofs, and match them to the signature request if present
 	var required AttributeConDisCon
-	var skipExpiryCheck []CredentialTypeIdentifier
 	if request != nil {
 		disclosureRequest := request.Disclosure()
 		required = disclosureRequest.Disclose
-		skipExpiryCheck = disclosureRequest.SkipExpiryCheck
 	}
 	allmatched, list, err := d.DisclosedAttributes(configuration, required, revtimes)
 	if err != nil {
@@ -357,15 +366,6 @@ func (d *Disclosure) VerifyAgainstRequest(
 	// Return MISSING_ATTRIBUTES as proofstatus if one of the disjunctions in the request (if present) is not satisfied
 	if !allmatched {
 		return list, ProofStatusMissingAttributes, nil
-	}
-
-	// Check that all credentials were unexpired
-	expired, err := ProofList(d.Proofs).Expired(configuration, validAt, skipExpiryCheck)
-	if err != nil {
-		return nil, ProofStatusInvalid, err
-	}
-	if expired {
-		return list, ProofStatusExpired, nil
 	}
 
 	return list, ProofStatusValid, nil

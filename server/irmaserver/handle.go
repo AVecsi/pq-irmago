@@ -134,9 +134,11 @@ func (session *sessionData) handlePostDisclosure(disclosure *irma.Disclosure, co
 
 	// In case of chained sessions, we also expect attributes from previous sessions to be disclosed again.
 	request := session.Rrequest.SessionRequest().(*irma.DisclosureRequest)
+
 	request.Disclose = append(request.Disclose, session.ImplicitDisclosure...)
 
 	session.Result.Disclosed, session.Result.ProofStatus, err = disclosure.Verify(conf.IrmaConfiguration, request)
+
 	if err != nil && err == irma.ErrMissingPublicKey {
 		rerr = session.fail(server.ErrorUnknownPublicKey, err.Error(), conf)
 	} else if err != nil {
@@ -186,19 +188,24 @@ func (session *sessionData) handlePostCommitments(commitments *irma.IssueCommitm
 	// Compute CL signatures
 	var sigs []*gabi.ZkDilSignature
 	for _, cred := range request.Credentials {
-		id := cred.CredentialTypeID.IssuerIdentifier()
-		pk, _ := conf.IrmaConfiguration.PublicKey(id, cred.KeyCounter)
-		sk, _ := conf.IrmaConfiguration.PrivateKeys.Latest(id)
+		//id := cred.CredentialTypeID.IssuerIdentifier()
+		//pk, _ := conf.IrmaConfiguration.PublicKey(id, cred.KeyCounter)
+		//sk, _ := conf.IrmaConfiguration.PrivateKeys.Latest(id)
+		//TODO probably its not the place where is should get new keypair for the issuer
+		seed := make([]byte, 32)
+		sk, pk, _ := gabikeys.GenerateKeyPair(seed, 0, time.Now().AddDate(1, 0, 0))
 		issuer := gabi.NewIssuer(sk, pk, one)
 		attrs, err := session.computeAttributes(sk, cred, conf)
 		if err != nil {
 			return nil, session.fail(server.ErrorIssuanceFailed, err.Error(), conf)
 		}
 		//rb := conf.IrmaConfiguration.CredentialTypes[cred.CredentialTypeID].RandomBlindAttributeIndices()
-		sig, _, err := issuer.IssueSignature(nil, attrs)
+		sig, _, err := issuer.IssueSignature(commitments.UserSecret, attrs)
+
 		if err != nil {
 			return nil, session.fail(server.ErrorIssuanceFailed, err.Error(), conf)
 		}
+
 		sigs = append(sigs, sig)
 	}
 
@@ -296,19 +303,24 @@ func (s *Server) startNext(session *sessionData, res *irma.ServerSessionResponse
 }
 
 func (s *Server) handleSessionCommitments(w http.ResponseWriter, r *http.Request) {
+
 	defer common.Close(r.Body)
 	commitments := &irma.IssueCommitmentMessage{}
 	bts, err := io.ReadAll(r.Body)
+
 	if err != nil {
 		server.WriteError(w, server.ErrorMalformedInput, err.Error())
 		return
 	}
+
 	if err := irma.UnmarshalValidate(bts, commitments); err != nil {
 		server.WriteError(w, server.ErrorMalformedInput, err.Error())
 		return
 	}
+
 	session := r.Context().Value("session").(*sessionData)
 	res, rerr := session.handlePostCommitments(commitments, s.conf)
+
 	if rerr != nil {
 		server.WriteResponse(w, nil, rerr)
 		return

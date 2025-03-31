@@ -75,11 +75,11 @@ const (
 )
 
 const (
-	ReadTimeout  = 2 * time.Second
+	ReadTimeout  = 30 * time.Second
 	WriteTimeout = 2 * ReadTimeout
 )
 
-var PostSizeLimit int64 = 10 << 20 // 10 MB
+var PostSizeLimit int64 = 10 << 25 // 300 MB
 
 // Legacy returns a pre-condiscon version of this SessionResult.
 // Remove this when dropping support for legacy pre-condiscon session requests.
@@ -500,7 +500,7 @@ func TimeoutMiddleware(except []string, timeout time.Duration) func(http.Handler
 				next.ServeHTTP(w, r.WithContext(ctx))
 			})
 
-			http.TimeoutHandler(nextHandler, timeout+200*time.Millisecond, "").ServeHTTP(w, r)
+			http.TimeoutHandler(nextHandler, timeout+20000*time.Millisecond, "").ServeHTTP(w, r)
 		})
 	}
 }

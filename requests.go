@@ -427,6 +427,7 @@ func (c AttributeCon) Satisfy(proofs gabi.DisclosureProof, indices []*DisclosedA
 	if len(indices) < len(c) {
 		return false, nil, nil
 	}
+
 	attrs := make([]*DisclosedAttribute, 0, len(c))
 	if len(c) == 0 {
 		return true, attrs, nil
@@ -434,7 +435,7 @@ func (c AttributeCon) Satisfy(proofs gabi.DisclosureProof, indices []*DisclosedA
 
 	for j := range c {
 		index := indices[j]
-		attr, val, err := extractAttribute((ProofList)(proofs), index, revocation[index.CredentialIndex], conf)
+		attr, val, err := extractAttribute((ProofList)(proofs), index, conf)
 		if err != nil {
 			return false, nil, err
 		}
@@ -501,7 +502,6 @@ func (cdc AttributeConDisCon) Satisfy(disclosure *Disclosure, revocation map[int
 	}
 	list := make([][]*DisclosedAttribute, len(cdc))
 	complete := true
-
 	for i, discon := range cdc {
 		satisfied, attrs, err := discon.Satisfy(disclosure.Proofs, disclosure.Indices[i], revocation, conf)
 		if err != nil {

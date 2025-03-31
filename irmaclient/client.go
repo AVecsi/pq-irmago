@@ -926,6 +926,7 @@ func (client *Client) ProofBuilders(choice *irma.DisclosureChoice, request irma.
 
 	//TODO VADAM request.GetNonce(timestamp)
 	disclosureProof, err := gabi.CreateDisclosureProof(creds, credDisclosures)
+	disclosureProof.Verify()
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -956,24 +957,25 @@ func generateIssuerProofNonce() (*big.Int, error) {
 // a nonce against which the issuer's proof of knowledge must verify.
 func (client *Client) IssuanceProofBuilders(
 	request *irma.IssuanceRequest, choice *irma.DisclosureChoice,
-) (irma.DisclosedAttributeIndices, error) {
+) (*big.Int, irma.DisclosedAttributeIndices, error) {
 	_, choices, _, err := client.ProofBuilders(choice, request)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return choices, nil
+	return client.secretkey.Key, choices, nil
 }
 
 // IssueCommitments computes issuance commitments, along with disclosure proofs specified by choice,
 // and also returns the credential builders which will become the new credentials upon combination with the issuer's signature.
 func (client *Client) IssueCommitments(request *irma.IssuanceRequest, choice *irma.DisclosureChoice,
 ) (*irma.IssueCommitmentMessage, error) {
-	choices, err := client.IssuanceProofBuilders(request, choice)
+	secretkey, choices, err := client.IssuanceProofBuilders(request, choice)
 	if err != nil {
 		return nil, err
 	}
 	return &irma.IssueCommitmentMessage{
-		Indices: choices,
+		UserSecret: secretkey,
+		Indices:    choices,
 	}, nil
 }
 

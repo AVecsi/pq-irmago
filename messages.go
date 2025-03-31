@@ -135,6 +135,7 @@ func UnmarshalValidate(data []byte, dest interface{}) error {
 	if err := json.Unmarshal(data, dest); err != nil {
 		return err
 	}
+
 	if v, ok := dest.(Validator); ok {
 		return v.Validate()
 	}
@@ -299,7 +300,8 @@ type DisclosedAttributeIndex struct {
 }
 
 type IssueCommitmentMessage struct {
-	Indices DisclosedAttributeIndices `json:"indices,omitempty"`
+	UserSecret *big.Int
+	Indices    DisclosedAttributeIndices `json:"indices,omitempty"`
 }
 
 //
