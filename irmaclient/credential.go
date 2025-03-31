@@ -20,11 +20,7 @@ func newCredential(gabicred *gabi.Credential, attrs *irma.AttributeList, conf *i
 		MetadataAttribute: meta,
 	}
 
-	if cred.CredentialType() == nil {
-		// Unknown credtype, populate Pk field later
-		return cred, nil
-	}
-
 	cred.attrs = attrs
+
 	return cred, nil
 }

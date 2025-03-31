@@ -58,13 +58,7 @@ type AttributeList struct {
 // NewAttributeListFromInts initializes a new AttributeList from a list of bigints.
 func NewAttributeListFromInts(ints []*big.Int, conf *Configuration) *AttributeList {
 	metadata := MetadataFromInt(ints[0], conf)
-	credtype := metadata.CredentialType()
 	revocationSupported := false
-	if credtype != nil {
-		idx := credtype.RevocationIndex + 1
-		revocationSupported = credtype.RevocationSupported() &&
-			len(ints) > idx && ints[idx] != nil && ints[idx].Cmp(bigZero) != 0
-	}
 	return &AttributeList{
 		Ints:                ints,
 		MetadataAttribute:   metadata,
@@ -74,9 +68,12 @@ func NewAttributeListFromInts(ints []*big.Int, conf *Configuration) *AttributeLi
 
 func (al *AttributeList) Info() *CredentialInfo {
 	if al.info == nil {
+		if al.CredentialInfo() == nil {
+			return nil
+		}
 		al.info = al.CredentialInfo()
 	}
-	al.info.Revoked = al.Revoked
+	al.info.Revoked = false
 	return al.info
 }
 

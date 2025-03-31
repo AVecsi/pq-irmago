@@ -81,7 +81,7 @@ type Preferences struct {
 }
 
 var defaultPreferences = Preferences{
-	DeveloperMode: false,
+	DeveloperMode: true,
 }
 
 // KeyshareHandler is used for asking the user for his email address and PIN,
@@ -320,14 +320,14 @@ func (client *Client) addCredential(cred *credential) (err error) {
 	// (it makes no sense to possess duplicate credentials, but the new signature might contain new
 	// functionality such as a nonrevocation witness, so it does not suffice to just return here)
 	index := -1
-	for _, attrlistlist := range client.attributes {
+	/* for _, attrlistlist := range client.attributes {
 		for i, attrs := range attrlistlist {
 			if attrs.Hash() == cred.attrs.Hash() {
 				index = i
 				break
 			}
 		}
-	}
+	} */
 	if index != -1 {
 		if err = client.remove(id, index, false); err != nil {
 			return err
@@ -367,6 +367,7 @@ func (client *Client) addCredential(cred *credential) (err error) {
 		if err = client.storage.TxStoreSignature(tx, cred); err != nil {
 			return err
 		}
+
 		return client.storage.TxStoreAttributes(tx, id, client.attributes[id])
 	})
 }
@@ -562,6 +563,9 @@ func (client *Client) credential(id irma.CredentialTypeIdentifier, counter int) 
 	var merkleLeaves []merkletree.Content
 	var gabiAttributes []*gabi.Attribute
 
+	gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: client.secretkey.Key.Bytes()})
+	merkleLeaves = append(merkleLeaves, gabi.Attribute{Value: client.secretkey.Key.Bytes()})
+
 	for i := range attrs.Ints {
 		gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attrs.Ints[i].Bytes()})
 		merkleLeaves = append(merkleLeaves, gabi.Attribute{Value: attrs.Ints[i].Bytes()})
@@ -573,10 +577,8 @@ func (client *Client) credential(id irma.CredentialTypeIdentifier, counter int) 
 	}
 
 	cred, err = newCredential(&gabi.Credential{
-		Signature: sig,
-		Attributes: append([]*gabi.Attribute{
-			&gabi.Attribute{Value: client.secretkey.Key.Bytes()},
-		}, gabiAttributes...),
+		Signature:    sig,
+		Attributes:   gabiAttributes,
 		AttrTreeRoot: merkleTree.MerkleRoot(),
 	}, attrs, client.Configuration)
 	if err != nil {
@@ -634,6 +636,7 @@ func (client *Client) credCandidates(request irma.SessionRequest, con irma.Attri
 		}
 		candidates = append(candidates, c)
 	}
+
 	return candidates, satisfiable, nil
 }
 
@@ -725,6 +728,7 @@ func (set credCandidateSet) expand(client *Client, base *irma.BaseRequest, con i
 				if attr.Type.CredentialTypeIdentifier() != credopt.Type {
 					continue
 				}
+
 				attropt := &DisclosureCandidate{
 					AttributeIdentifier: &irma.AttributeIdentifier{
 						Type:           attr.Type,
@@ -732,6 +736,7 @@ func (set credCandidateSet) expand(client *Client, base *irma.BaseRequest, con i
 					},
 					Value: irma.NewTranslatedString(attr.Value),
 				}
+
 				if credopt.Present() {
 					attrlist, _ := client.attributesByHash(credopt.Hash)
 					attropt.Expired = !attrlist.IsValid()
@@ -821,6 +826,7 @@ func (client *Client) Candidates(request irma.SessionRequest) (
 		if err != nil {
 			return nil, false, err
 		}
+
 		if !disconSatisfiable {
 			satisfiable = false
 		}
@@ -886,6 +892,7 @@ func (client *Client) groupCredentials(choice *irma.DisclosureChoice) (
 // ProofBuilders constructs a list of proof builders for the specified attribute choice.
 func (client *Client) ProofBuilders(choice *irma.DisclosureChoice, request irma.SessionRequest,
 ) (*gabi.DisclosureProof, irma.DisclosedAttributeIndices, *atum.Timestamp, error) {
+
 	todisclose, attributeIndices, err := client.groupCredentials(choice)
 	if err != nil {
 		return nil, nil, nil, err
@@ -901,6 +908,7 @@ func (client *Client) ProofBuilders(choice *irma.DisclosureChoice, request irma.
 		}
 
 		credDisclosure = gabi.CreateCredentialDisclosure(cred.Credential, grp.attrs)
+
 		credDisclosures = append(credDisclosures, credDisclosure)
 
 		creds = append(creds, cred.Credential)
@@ -924,11 +932,13 @@ func (client *Client) ProofBuilders(choice *irma.DisclosureChoice, request irma.
 		}
 	}
 
+	disclosureProof := new(gabi.DisclosureProof)
 	//TODO VADAM request.GetNonce(timestamp)
-	disclosureProof, err := gabi.CreateDisclosureProof(creds, credDisclosures)
-	disclosureProof.Verify()
-	if err != nil {
-		return nil, nil, nil, err
+	if len(creds) != 0 {
+		disclosureProof, err = gabi.CreateDisclosureProof(creds, credDisclosures)
+		if err != nil {
+			return nil, nil, nil, err
+		}
 	}
 
 	return disclosureProof, attributeIndices, timestamp, nil
@@ -986,7 +996,6 @@ func (client *Client) ConstructCredentials(msg []*gabi.ZkDilSignature, request *
 	// First collect all credentials in a slice, so that if one of them induces an error,
 	// we save none of them to fail the session cleanly
 	gabicreds := []*gabi.Credential{}
-	attrInts := [][]*big.Int{}
 	for i, sig := range msg {
 
 		issuedAt := time.Now()
@@ -1003,6 +1012,8 @@ func (client *Client) ConstructCredentials(msg []*gabi.ZkDilSignature, request *
 		var merkleLeaves []merkletree.Content
 		var gabiAttributes []*gabi.Attribute
 
+		merkleLeaves = append(merkleLeaves, gabi.Attribute{Value: client.secretkey.Key.Bytes()})
+
 		for i := range attrs.Ints {
 			gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attrs.Ints[i].Bytes()})
 			merkleLeaves = append(merkleLeaves, gabi.Attribute{Value: attrs.Ints[i].Bytes()})
@@ -1016,11 +1027,18 @@ func (client *Client) ConstructCredentials(msg []*gabi.ZkDilSignature, request *
 		cred := &gabi.Credential{Signature: sig, Attributes: gabiAttributes, AttrTreeRoot: merkleTree.MerkleRoot()}
 
 		gabicreds = append(gabicreds, cred)
-		attrInts = append(attrInts, attrs.Ints[1:])
 	}
 
-	for i, gabicred := range gabicreds {
-		attrs := irma.NewAttributeListFromInts(attrInts[i], client.Configuration)
+	for _, gabicred := range gabicreds {
+
+		attrInts := []*big.Int{}
+
+		for _, attr := range gabicred.Attributes {
+			attrInts = append(attrInts, attr.IntValue())
+		}
+
+		attrs := irma.NewAttributeListFromInts(attrInts, client.Configuration)
+
 		newcred, err := newCredential(gabicred, attrs, client.Configuration)
 		if err != nil {
 			return err

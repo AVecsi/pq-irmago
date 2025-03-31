@@ -314,6 +314,9 @@ var clientUpdates = []func(client *Client) error{
 					var gabiAttributes []*gabi.Attribute
 					var merkleLeaves []merkletree.Content
 
+					gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: client.secretkey.Key.Bytes()})
+					merkleLeaves = append(merkleLeaves, gabi.Attribute{Value: client.secretkey.Key.Bytes()})
+
 					for i := range attrlist.Ints {
 						gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attrlist.Ints[i].Bytes()})
 						merkleLeaves = append(merkleLeaves, gabi.Attribute{Value: attrlist.Ints[i].Bytes()})

@@ -61,7 +61,7 @@ func SetLogger(logger *logrus.Logger) {
 	gabi.Logger = Logger
 	common.Logger = Logger
 	//revocation.Logger = Logger
-	sseclient.Logger = log.New(Logger.WithField("type", "sseclient").WriterLevel(logrus.TraceLevel), "", 0)
+	sseclient.Logger = log.New(Logger.WithField("type", "sseclient").WriterLevel(logrus.DebugLevel), "", 0)
 }
 
 // SetTLSClientConfig sets the TLS configuration being used for future outbound connections.
@@ -72,8 +72,8 @@ func SetTLSClientConfig(config *tls.Config) {
 
 // NewHTTPTransport returns a new HTTPTransport.
 func NewHTTPTransport(serverURL string, forceHTTPS bool) *HTTPTransport {
-	if Logger.IsLevelEnabled(logrus.TraceLevel) {
-		transportlogger = log.New(Logger.WriterLevel(logrus.TraceLevel), "transport: ", 0)
+	if Logger.IsLevelEnabled(logrus.DebugLevel) {
+		transportlogger = log.New(Logger.WriterLevel(logrus.DebugLevel), "transport: ", 0)
 	} else {
 		transportlogger = log.New(io.Discard, "", 0)
 	}
@@ -187,7 +187,21 @@ func (transport *HTTPTransport) log(prefix string, message interface{}, binary b
 		binary = false
 	}
 	if !binary {
-		Logger.Tracef("transport: %s: %s", prefix, str)
+		if len(str) > 4000 {
+			Logger.Tracef("transport: %s: ", prefix)
+			amountOfPrints := (len(str) / 4000)
+			for i := 0; i < amountOfPrints; i++ {
+				if len(str) < 4000 {
+					Logger.Tracef("%s", str)
+				} else {
+					substring := str[:4000]
+					str = str[4000:]
+					Logger.Tracef("%s", substring)
+				}
+			}
+		} else {
+			Logger.Tracef("transport: %s: %s", prefix, str)
+		}
 	} else {
 		Logger.Tracef("transport: %s (hex): %s", prefix, hex.EncodeToString([]byte(str)))
 	}

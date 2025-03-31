@@ -445,11 +445,11 @@ func (session *session) doSession(proceed bool, choice *irma.DisclosureChoice) {
 	session.Handler.StatusUpdate(session.Action, irma.ClientStatusCommunicating)
 
 	// wait for revocation preparation to finish
-	err := <-session.prepRevocation
+	/* err := <-session.prepRevocation
 	if err != nil {
 		session.fail(&irma.SessionError{ErrorType: irma.ErrorRevocation, Err: err})
 		return
-	}
+	} */
 
 	if !session.Distributed() {
 		message, err := session.getProof()
@@ -457,6 +457,7 @@ func (session *session) doSession(proceed bool, choice *irma.DisclosureChoice) {
 			session.fail(&irma.SessionError{ErrorType: irma.ErrorCrypto, Err: err})
 			return
 		}
+
 		session.sendResponse(message)
 		session.finish(false)
 	} else {
@@ -553,20 +554,21 @@ func (session *session) sendResponse(message interface{}) {
 
 // getBuilders computes the builders for disclosure proofs or secretkey-knowledge proof (in case of disclosure/signing
 // and issuing respectively).
-func (session *session) getBuilders() (gabi.DisclosureProof, irma.DisclosedAttributeIndices, *big.Int, error) {
+func (session *session) getBuilders() (gabi.DisclosureProof, *big.Int, irma.DisclosedAttributeIndices, *big.Int, error) {
 	var builders *gabi.DisclosureProof
 	var err error
 	var issuerProofNonce *big.Int
 	var choices irma.DisclosedAttributeIndices
+	var userSecret *big.Int
 
 	switch session.Action {
 	case irma.ActionSigning, irma.ActionDisclosing:
 		builders, choices, session.timestamp, err = session.client.ProofBuilders(session.choice, session.request)
 	case irma.ActionIssuing:
-		choices, err = session.client.IssuanceProofBuilders(session.request.(*irma.IssuanceRequest), session.choice)
+		userSecret, choices, err = session.client.IssuanceProofBuilders(session.request.(*irma.IssuanceRequest), session.choice)
 	}
 
-	return *builders, choices, issuerProofNonce, err
+	return *builders, userSecret, choices, issuerProofNonce, err
 }
 
 // getProofs computes the disclosure proofs or secretkey-knowledge proof (in case of disclosure/signing
