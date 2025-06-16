@@ -1286,3 +1286,7 @@ func (dcs DisclosureCandidates) Choose() ([]*irma.AttributeIdentifier, error) {
 	}
 	return ids, nil
 }
+
+func DoTest() {
+	gabi.Test()
+}
