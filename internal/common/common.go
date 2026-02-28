@@ -1,6 +1,7 @@
 package common
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
@@ -472,4 +473,15 @@ func ParseNestedLDContext(bts []byte) (string, error) {
 		return "", err
 	}
 	return v.Request.LDContext, nil
+}
+
+// TODO delete its only benchmark
+func PackFesInt(fes []int) []byte {
+	var ret bytes.Buffer
+	for _, fe := range fes {
+		ret.WriteByte(byte(fe & 255))
+		ret.WriteByte(byte((fe >> 8) & 255))
+		ret.WriteByte(byte(fe >> 16))
+	}
+	return ret.Bytes()
 }

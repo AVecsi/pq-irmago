@@ -9,11 +9,11 @@ import (
 
 	gabi "github.com/AVecsi/pq-gabi"
 	"github.com/AVecsi/pq-gabi/big"
+	"github.com/AVecsi/pq-gabi/poseidon"
 	irma "github.com/AVecsi/pq-irmago"
 	"github.com/AVecsi/pq-irmago/internal/common"
 	"github.com/AVecsi/pq-irmago/internal/concmap"
 	"github.com/bwesterb/go-atum"
-	"github.com/cbergoon/merkletree"
 	"github.com/go-co-op/gocron"
 	"github.com/go-errors/errors"
 )
@@ -560,26 +560,41 @@ func (client *Client) credential(id irma.CredentialTypeIdentifier, counter int) 
 		return nil, errors.New("unknown public key")
 	}
 
-	var merkleLeaves []merkletree.Content
 	var gabiAttributes []*gabi.Attribute
 
 	gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: client.secretkey.Key.Bytes()})
-	merkleLeaves = append(merkleLeaves, gabi.Attribute{Value: client.secretkey.Key.Bytes()})
+
+	//TODO this should be a random nonce in practice
+	gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: client.secretkey.Key.Bytes()})
 
 	for i := range attrs.Ints {
 		gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attrs.Ints[i].Bytes()})
-		merkleLeaves = append(merkleLeaves, gabi.Attribute{Value: attrs.Ints[i].Bytes()})
 	}
 
-	merkleTree, err := merkletree.NewTreeWithHashStrategy(merkleLeaves, gabi.HashStrategy)
-	if err != nil {
-		return nil, err
+	h := poseidon.NewPoseidon(nil, gabi.POS_RF, gabi.POS_T, gabi.POS_RATE, 7340033)
+	h.Write(gabiAttributes[0].Hash)
+	h.Write(gabiAttributes[1].Hash)
+	hiddenHashFes := h.Read(12)
+
+	h.Reset()
+	for i := 2; i < len(gabiAttributes); i += 2 {
+		h.Write(gabiAttributes[i].Hash)
+		h.Write(gabiAttributes[i+1].Hash)
 	}
+
+	publicHashFes := h.Read(12)
+
+	h.Reset()
+	h.WriteInts(hiddenHashFes)
+	h.WriteInts(publicHashFes)
+
+	combinedHash := common.PackFesInt(h.Read(12))
 
 	cred, err = newCredential(&gabi.Credential{
-		Signature:    sig,
-		Attributes:   gabiAttributes,
-		AttrTreeRoot: merkleTree.MerkleRoot(),
+		Signature:     sig,
+		Attributes:    gabiAttributes,
+		UserAttrCount: 2,
+		AttrHash:      combinedHash,
 	}, attrs, client.Configuration)
 	if err != nil {
 		return nil, err
@@ -1009,22 +1024,37 @@ func (client *Client) ConstructCredentials(msg []*gabi.ZkDilSignature, request *
 			return err
 		}
 
-		var merkleLeaves []merkletree.Content
 		var gabiAttributes []*gabi.Attribute
 
-		merkleLeaves = append(merkleLeaves, gabi.Attribute{Value: client.secretkey.Key.Bytes()})
+		gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: client.secretkey.Key.Bytes()})
+
+		//TODO this should be a random nonce in practice
+		gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: client.secretkey.Key.Bytes()})
 
 		for i := range attrs.Ints {
 			gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attrs.Ints[i].Bytes()})
-			merkleLeaves = append(merkleLeaves, gabi.Attribute{Value: attrs.Ints[i].Bytes()})
 		}
 
-		merkleTree, err := merkletree.NewTreeWithHashStrategy(merkleLeaves, gabi.HashStrategy)
-		if err != nil {
-			return err
+		h := poseidon.NewPoseidon(nil, gabi.POS_RF, gabi.POS_T, gabi.POS_RATE, 7340033)
+		h.Write(gabiAttributes[0].Hash)
+		h.Write(gabiAttributes[1].Hash)
+		hiddenHashFes := h.Read(12)
+
+		h.Reset()
+		for i := 2; i < len(gabiAttributes); i += 2 {
+			h.Write(gabiAttributes[i].Hash)
+			h.Write(gabiAttributes[i+1].Hash)
 		}
 
-		cred := &gabi.Credential{Signature: sig, Attributes: gabiAttributes, AttrTreeRoot: merkleTree.MerkleRoot()}
+		publicHashFes := h.Read(12)
+
+		h.Reset()
+		h.WriteInts(hiddenHashFes)
+		h.WriteInts(publicHashFes)
+
+		combinedHash := common.PackFesInt(h.Read(12))
+
+		cred := &gabi.Credential{Signature: sig, Attributes: gabiAttributes, UserAttrCount: 2, AttrHash: combinedHash}
 
 		gabicreds = append(gabicreds, cred)
 	}

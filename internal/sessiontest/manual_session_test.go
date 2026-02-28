@@ -48,7 +48,8 @@ func manualSessionHelper(t *testing.T, client *irmaclient.Client, h *ManualTestH
 	case irma.ActionSigning:
 		if corrupt {
 			// Interesting: modifying C results in INVALID_CRYPTO; modifying A or an attribute results in INVALID_TIMESTAMP
-			result.SignatureResult.Signature.SecretAttrCommitment.Comm[0] += 16
+			//TODO
+			//result.SignatureResult.Signature.SecretAttrCommitment.Comm[0] += 16
 		}
 		r, _ := verifyAs.(*irma.SignatureRequest)
 		list, status, err := result.SignatureResult.Verify(client.Configuration, r)

@@ -5,7 +5,8 @@ import (
 	"time"
 
 	gabi "github.com/AVecsi/pq-gabi"
-	"github.com/cbergoon/merkletree"
+	"github.com/AVecsi/pq-gabi/poseidon"
+	"github.com/AVecsi/pq-irmago/internal/common"
 	"go.etcd.io/bbolt"
 
 	irma "github.com/AVecsi/pq-irmago"
@@ -312,22 +313,36 @@ var clientUpdates = []func(client *Client) error{
 					}
 
 					var gabiAttributes []*gabi.Attribute
-					var merkleLeaves []merkletree.Content
 
 					gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: client.secretkey.Key.Bytes()})
-					merkleLeaves = append(merkleLeaves, gabi.Attribute{Value: client.secretkey.Key.Bytes()})
+
+					//TODO this should be a random nonce in practice
+					gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: client.secretkey.Key.Bytes()})
 
 					for i := range attrlist.Ints {
 						gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attrlist.Ints[i].Bytes()})
-						merkleLeaves = append(merkleLeaves, gabi.Attribute{Value: attrlist.Ints[i].Bytes()})
 					}
 
-					merkleTree, err := merkletree.NewTreeWithHashStrategy(merkleLeaves, gabi.HashStrategy)
-					if err != nil {
-						return err
+					h := poseidon.NewPoseidon(nil, gabi.POS_RF, gabi.POS_T, gabi.POS_RATE, 7340033)
+					h.Write(gabiAttributes[0].Hash)
+					h.Write(gabiAttributes[1].Hash)
+					hiddenHashFes := h.Read(12)
+
+					h.Reset()
+					for i := 2; i < len(gabiAttributes); i += 2 {
+						h.Write(gabiAttributes[i].Hash)
+						h.Write(gabiAttributes[i+1].Hash)
 					}
 
-					cred := &credential{attrs: attrlist, Credential: &gabi.Credential{Signature: e, Attributes: gabiAttributes, AttrTreeRoot: merkleTree.MerkleRoot()}}
+					publicHashFes := h.Read(12)
+
+					h.Reset()
+					h.WriteInts(hiddenHashFes)
+					h.WriteInts(publicHashFes)
+
+					combinedHash := common.PackFesInt(h.Read(12))
+
+					cred := &credential{attrs: attrlist, Credential: &gabi.Credential{Signature: e, Attributes: gabiAttributes, UserAttrCount: 2, AttrHash: combinedHash}}
 					err = client.storage.TxStoreSignature(tx, cred)
 					if err != nil {
 						return err
