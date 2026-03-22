@@ -6,7 +6,6 @@ import (
 
 	gabi "github.com/AVecsi/pq-gabi"
 	"github.com/AVecsi/pq-gabi/poseidon"
-	"github.com/AVecsi/pq-irmago/internal/common"
 	"go.etcd.io/bbolt"
 
 	irma "github.com/AVecsi/pq-irmago"
@@ -314,11 +313,12 @@ var clientUpdates = []func(client *Client) error{
 
 					var gabiAttributes []*gabi.Attribute
 
-					gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: client.secretkey.Key.Bytes()})
+					gabiAttributes = append(gabiAttributes, gabi.NewAttribute(client.secretkey.Key.Bytes()))
 
 					//TODO this should be a random nonce in practice
-					gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: client.secretkey.Key.Bytes()})
+					gabiAttributes = append(gabiAttributes, gabi.NewAttribute(client.secretkey.Key.Bytes()))
 
+					//TODO implement helper function in pq-gabi for this
 					for i := range attrlist.Ints {
 						gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attrlist.Ints[i].Bytes()})
 					}
@@ -340,9 +340,9 @@ var clientUpdates = []func(client *Client) error{
 					h.WriteInts(hiddenHashFes)
 					h.WriteInts(publicHashFes)
 
-					combinedHash := common.PackFesInt(h.Read(12))
+					combinedHash := h.ReadUint32(12)
 
-					cred := &credential{attrs: attrlist, Credential: &gabi.Credential{Signature: e, Attributes: gabiAttributes, UserAttrCount: 2, AttrHash: combinedHash}}
+					cred := &credential{attrs: attrlist, Credential: &gabi.Credential{Signature: e, Attributes: gabiAttributes, UserAttrCount: 2, CredHash: combinedHash}}
 					err = client.storage.TxStoreSignature(tx, cred)
 					if err != nil {
 						return err

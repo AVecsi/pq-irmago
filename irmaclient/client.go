@@ -571,6 +571,7 @@ func (client *Client) credential(id irma.CredentialTypeIdentifier, counter int) 
 		gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attrs.Ints[i].Bytes()})
 	}
 
+	//TODO
 	h := poseidon.NewPoseidon(nil, gabi.POS_RF, gabi.POS_T, gabi.POS_RATE, 7340033)
 	h.Write(gabiAttributes[0].Hash)
 	h.Write(gabiAttributes[1].Hash)
@@ -588,13 +589,13 @@ func (client *Client) credential(id irma.CredentialTypeIdentifier, counter int) 
 	h.WriteInts(hiddenHashFes)
 	h.WriteInts(publicHashFes)
 
-	combinedHash := common.PackFesInt(h.Read(12))
+	combinedHash := h.ReadUint32(12)
 
 	cred, err = newCredential(&gabi.Credential{
 		Signature:     sig,
 		Attributes:    gabiAttributes,
 		UserAttrCount: 2,
-		AttrHash:      combinedHash,
+		CredHash:      combinedHash,
 	}, attrs, client.Configuration)
 	if err != nil {
 		return nil, err
@@ -973,9 +974,9 @@ func (client *Client) Proofs(choice *irma.DisclosureChoice, request irma.Session
 }
 
 // generateIssuerProofNonce generates a nonce which the issuer must use in its gabi.ProofS.
-func generateIssuerProofNonce() (*big.Int, error) {
-	return gabi.GenerateNonce()
-}
+// func generateIssuerProofNonce() (*big.Int, error) {
+// 	return gabi.GenerateNonce()
+// }
 
 // IssuanceProofBuilders constructs a list of proof builders in the issuance protocol
 // for the future credentials as well as possibly any disclosed attributes, and generates
@@ -1035,6 +1036,7 @@ func (client *Client) ConstructCredentials(msg []*gabi.ZkDilSignature, request *
 			gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attrs.Ints[i].Bytes()})
 		}
 
+		//TODO
 		h := poseidon.NewPoseidon(nil, gabi.POS_RF, gabi.POS_T, gabi.POS_RATE, 7340033)
 		h.Write(gabiAttributes[0].Hash)
 		h.Write(gabiAttributes[1].Hash)
@@ -1052,9 +1054,9 @@ func (client *Client) ConstructCredentials(msg []*gabi.ZkDilSignature, request *
 		h.WriteInts(hiddenHashFes)
 		h.WriteInts(publicHashFes)
 
-		combinedHash := common.PackFesInt(h.Read(12))
+		combinedHash := h.ReadUint32(12)
 
-		cred := &gabi.Credential{Signature: sig, Attributes: gabiAttributes, UserAttrCount: 2, AttrHash: combinedHash}
+		cred := &gabi.Credential{Signature: sig, Attributes: gabiAttributes, UserAttrCount: 2, CredHash: combinedHash}
 
 		gabicreds = append(gabicreds, cred)
 	}

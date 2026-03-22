@@ -1,11 +1,24 @@
 FROM golang:1-alpine as build
 
 # Set build environment
-ENV CGO_ENABLED=0
+ENV CGO_ENABLED=1
+
+RUN apk add --no-cache gcc musl-dev curl git make
+
+# Install Rust
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Build irma CLI tool
 COPY . /irmago
 WORKDIR /irmago
+
+# Build pq-gabi's Rust dependency before go build
+RUN go mod download && \
+    cd /go/pkg/mod/github.com/\!a\!vecsi/pq-gabi@$(go list -m -f '{{.Version}}' github.com/AVecsi/pq-gabi) && \
+    chmod -R u+w . && \
+    make build
+
 RUN go build -a -ldflags '-extldflags "-static"' -o "/bin/irma" ./irma
 
 # Create application user

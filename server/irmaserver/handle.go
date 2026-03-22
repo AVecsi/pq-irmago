@@ -9,6 +9,7 @@ import (
 
 	gabi "github.com/AVecsi/pq-gabi"
 	"github.com/AVecsi/pq-gabi/gabikeys"
+	"github.com/AVecsi/pq-gabi/poseidon"
 	irma "github.com/AVecsi/pq-irmago"
 	"github.com/AVecsi/pq-irmago/internal/common"
 	"github.com/AVecsi/pq-irmago/server"
@@ -200,7 +201,17 @@ func (session *sessionData) handlePostCommitments(commitments *irma.IssueCommitm
 			return nil, session.fail(server.ErrorIssuanceFailed, err.Error(), conf)
 		}
 		//rb := conf.IrmaConfiguration.CredentialTypes[cred.CredentialTypeID].RandomBlindAttributeIndices()
-		sig, _, err := issuer.IssueSignature(commitments.UserSecret, attrs)
+
+		//TODO just make it work for now, refactor
+		attr0 := gabi.NewAttribute(commitments.UserSecret.Bytes())
+		attr1 := gabi.NewAttribute(commitments.UserSecret.Bytes())
+
+		h := poseidon.NewPoseidon(nil, gabi.POS_RF, gabi.POS_T, gabi.POS_RATE, 7340033)
+		h.Write(attr0.Hash)
+		h.Write(attr1.Hash)
+		hiddenHashFes := common.PackFesInt(h.Read(12))
+
+		sig, err := issuer.IssueSignature(hiddenHashFes, attrs)
 
 		if err != nil {
 			return nil, session.fail(server.ErrorIssuanceFailed, err.Error(), conf)
