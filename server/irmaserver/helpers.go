@@ -695,7 +695,7 @@ func (s *Server) newSession(
 	}
 
 	s.conf.Logger.WithFields(logrus.Fields{"session": ses.RequestorToken}).Debug("New session started")
-	nonce, _ := gabi.GenerateNonce()
+	nonce, _ := gabi.GenerateSecretAttribute()
 	base.Nonce = nonce
 	base.Context = one
 

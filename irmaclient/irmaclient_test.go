@@ -84,7 +84,7 @@ func verifyClientIsUnmarshaled(t *testing.T, client *Client) {
 
 	require.NoError(t, err)
 	require.True(t,
-		cred.Signature.Verify(cred.AttrTreeRoot),
+		cred.Signature.Verify(cred.CredHash),
 		"Credential should be valid",
 	)
 }
@@ -96,7 +96,7 @@ func verifyCredentials(t *testing.T, client *Client) {
 			require.NoError(t, err)
 			require.NoError(t, err)
 			require.True(t,
-				cred.Credential.Signature.Verify(cred.AttrTreeRoot),
+				cred.Credential.Signature.Verify(cred.CredHash),
 				"Credential %s-%d was invalid", credtype.String(), index,
 			)
 			require.Equal(t, cred.Attributes[0], client.secretkey.Key,
