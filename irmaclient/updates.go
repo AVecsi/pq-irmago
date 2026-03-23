@@ -313,7 +313,7 @@ var clientUpdates = []func(client *Client) error{
 
 					var gabiAttributes []*gabi.Attribute
 
-					gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: client.secretkey.Key.Bytes()})
+					gabiAttributes = append(gabiAttributes, gabi.NewAttribute(client.secretkey.Key.Bytes()))
 					//TODO this should be a random nonce in practice
 					gabiAttributes = append(gabiAttributes, gabi.NewAttribute(client.secretkey.Key.Bytes()))
 

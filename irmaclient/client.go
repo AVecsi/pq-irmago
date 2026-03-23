@@ -562,10 +562,10 @@ func (client *Client) credential(id irma.CredentialTypeIdentifier, counter int) 
 
 	var gabiAttributes []*gabi.Attribute
 
-	gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: client.secretkey.Key.Bytes()})
+	gabiAttributes = append(gabiAttributes, gabi.NewAttribute(client.secretkey.Key.Bytes()))
 
 	//TODO this should be a random nonce in practice
-	gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: client.secretkey.Key.Bytes()})
+	gabiAttributes = append(gabiAttributes, gabi.NewAttribute(client.secretkey.Key.Bytes()))
 
 	for i := range attrs.Ints {
 		gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attrs.Ints[i].Bytes()})
@@ -1027,9 +1027,9 @@ func (client *Client) ConstructCredentials(msg []*gabi.ZkDilSignature, request *
 
 		var gabiAttributes []*gabi.Attribute
 
-		gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: client.secretkey.Key.Bytes()})
+		gabiAttributes = append(gabiAttributes, gabi.NewAttribute(client.secretkey.Key.Bytes()))
 		//TODO this should be a random nonce in practice
-		gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: client.secretkey.Key.Bytes()})
+		gabiAttributes = append(gabiAttributes, gabi.NewAttribute(client.secretkey.Key.Bytes()))
 
 		for i := range attrs.Ints {
 			gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attrs.Ints[i].Bytes()})

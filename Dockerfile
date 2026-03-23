@@ -1,7 +1,6 @@
 FROM golang:1-alpine as build
 
 # Set build environment
-ENV CGO_ENABLED=0
 ENV CGO_ENABLED=1
 
 RUN apk add --no-cache gcc musl-dev curl git make
