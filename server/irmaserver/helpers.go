@@ -157,7 +157,7 @@ func (session *sessionData) computeAttributes(
 	var gabiAttributes []*gabi.Attribute
 
 	for i := range attributes.Ints {
-		gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attributes.Ints[i].Bytes()})
+		gabiAttributes = append(gabiAttributes, gabi.NewAttribute(attributes.Ints[i].Bytes()))
 	}
 
 	return gabiAttributes, nil
@@ -403,7 +403,7 @@ func eventServer(conf *server.Configuration) *sse.Server {
 			"Access-Control-Allow-Methods": "GET, OPTIONS",
 			"Access-Control-Allow-Headers": "Keep-Alive,X-Requested-With,Cache-Control,Content-Type,Last-Event-ID",
 		},
-		Logger: log.New(conf.Logger.WithField("type", "sse").WriterLevel(logrus.DebugLevel), "", 0),
+		Logger: log.New(conf.Logger.WithField("type", "sse").WriterLevel(logrus.TraceLevel), "", 0),
 	})
 }
 

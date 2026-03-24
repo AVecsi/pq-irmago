@@ -568,7 +568,7 @@ func (client *Client) credential(id irma.CredentialTypeIdentifier, counter int) 
 	gabiAttributes = append(gabiAttributes, gabi.NewAttribute(client.secretkey.Key.Bytes()))
 
 	for i := range attrs.Ints {
-		gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attrs.Ints[i].Bytes()})
+		gabiAttributes = append(gabiAttributes, gabi.NewAttribute(attrs.Ints[i].Bytes()))
 	}
 
 	//TODO
@@ -578,9 +578,8 @@ func (client *Client) credential(id irma.CredentialTypeIdentifier, counter int) 
 	hiddenHashFes := h.Read(12)
 
 	h.Reset()
-	for i := 2; i < len(gabiAttributes); i += 2 {
+	for i := 2; i < len(gabiAttributes); i += 1 {
 		h.Write(gabiAttributes[i].Hash)
-		h.Write(gabiAttributes[i+1].Hash)
 	}
 
 	publicHashFes := h.Read(12)
@@ -1032,7 +1031,7 @@ func (client *Client) ConstructCredentials(msg []*gabi.ZkDilSignature, request *
 		gabiAttributes = append(gabiAttributes, gabi.NewAttribute(client.secretkey.Key.Bytes()))
 
 		for i := range attrs.Ints {
-			gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attrs.Ints[i].Bytes()})
+			gabiAttributes = append(gabiAttributes, gabi.NewAttribute(attrs.Ints[i].Bytes()))
 		}
 
 		//TODO
@@ -1042,9 +1041,8 @@ func (client *Client) ConstructCredentials(msg []*gabi.ZkDilSignature, request *
 		hiddenHashFes := h.Read(12)
 
 		h.Reset()
-		for i := 2; i < len(gabiAttributes); i += 2 {
+		for i := 2; i < len(gabiAttributes); i += 1 {
 			h.Write(gabiAttributes[i].Hash)
-			h.Write(gabiAttributes[i+1].Hash)
 		}
 
 		publicHashFes := h.Read(12)
@@ -1244,7 +1242,7 @@ func (client *Client) ConfigurationUpdated(downloaded *irma.IrmaIdentifierSet) e
 			var gabiAttributes []*gabi.Attribute
 
 			for i := range attrs {
-				gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attrs[i].Bytes()})
+				gabiAttributes = append(gabiAttributes, gabi.NewAttribute(attrs[i].Bytes()))
 			}
 
 			cred.Attributes = append(cred.Attributes[:1], gabiAttributes...)

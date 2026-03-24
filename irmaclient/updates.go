@@ -319,7 +319,7 @@ var clientUpdates = []func(client *Client) error{
 
 					//TODO implement helper function in pq-gabi for this
 					for i := range attrlist.Ints {
-						gabiAttributes = append(gabiAttributes, &gabi.Attribute{Value: attrlist.Ints[i].Bytes()})
+						gabiAttributes = append(gabiAttributes, gabi.NewAttribute(attrlist.Ints[i].Bytes()))
 					}
 
 					h := poseidon.NewPoseidon(nil, gabi.POS_RF, gabi.POS_T, gabi.POS_RATE, 7340033)
@@ -328,9 +328,8 @@ var clientUpdates = []func(client *Client) error{
 					hiddenHashFes := h.Read(12)
 
 					h.Reset()
-					for i := 2; i < len(gabiAttributes); i += 2 {
+					for i := 2; i < len(gabiAttributes); i += 1 {
 						h.Write(gabiAttributes[i].Hash)
-						h.Write(gabiAttributes[i+1].Hash)
 					}
 
 					publicHashFes := h.Read(12)
