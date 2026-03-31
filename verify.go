@@ -130,7 +130,7 @@ func (pl ProofList) VerifyProofs(
 ) (bool, map[int]*time.Time, error) {
 
 	// Empty proof lists are allowed (if consistent with the session request, which is checked elsewhere)
-	if len(pl.proof.CredentialDisclosures()) == 0 {
+	if pl.proof == nil {
 		return true, nil, nil
 	}
 
@@ -244,7 +244,12 @@ func (pl ProofList) VerifyProofs(
 }
 
 func (d *Disclosure) extraIndices(condiscon AttributeConDisCon) []*DisclosedAttributeIndex {
-	disclosed := make([]map[int]struct{}, len(d.Proofs.CredentialDisclosures()))
+	var disclosed []map[int]struct{}
+	if d.Proofs == nil {
+		return nil
+	}
+
+	disclosed = make([]map[int]struct{}, len(d.Proofs.CredentialDisclosures()))
 	for i, proofd := range d.Proofs.CredentialDisclosures() {
 		disclosed[i] = map[int]struct{}{}
 		for j := range proofd.DisclosedAttributes() {

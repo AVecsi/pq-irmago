@@ -500,7 +500,8 @@ func TimeoutMiddleware(except []string, timeout time.Duration) func(http.Handler
 				next.ServeHTTP(w, r.WithContext(ctx))
 			})
 
-			http.TimeoutHandler(nextHandler, timeout+20000*time.Millisecond, "").ServeHTTP(w, r)
+			//http.TimeoutHandler(nextHandler, timeout+20000*time.Millisecond, "").ServeHTTP(w, r)
+			nextHandler.ServeHTTP(w, r) // temporary: bypass timeout wrapper to see real panic stack
 		})
 	}
 }
@@ -572,6 +573,7 @@ func RecoverMiddleware(next http.Handler) http.Handler {
 		defer func() {
 			res := recover()
 			if res != nil {
+				debug.PrintStack()
 				LogError(errors.Errorf("Internal server error: %v", res))
 				WriteError(w, ErrorInternal, "")
 			}

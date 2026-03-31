@@ -3,6 +3,7 @@ package irma
 import (
 	"encoding/json"
 
+	gabi "github.com/AVecsi/pq-gabi"
 	"github.com/AVecsi/pq-irmago/internal/common"
 	"github.com/go-errors/errors"
 	"github.com/golang-jwt/jwt/v4"
@@ -332,16 +333,41 @@ func (s *ServerSessionResponse) MarshalJSON() ([]byte, error) {
 
 func (s *ServerSessionResponse) UnmarshalJSON(bts []byte) error {
 	if !s.ProtocolVersion.Below(2, 7) {
-		type response ServerSessionResponse
-		return json.Unmarshal(bts, (*response)(s))
+		var raw struct {
+			ProofStatus     ProofStatus       `json:"proofStatus"`
+			IssueSignatures []json.RawMessage `json:"sigs,omitempty"`
+			NextSession     *Qr               `json:"nextSession,omitempty"`
+		}
+		if err := json.Unmarshal(bts, &raw); err != nil {
+			return err
+		}
+		s.ProofStatus = raw.ProofStatus
+		s.NextSession = raw.NextSession
+		for _, rawSig := range raw.IssueSignatures {
+			sig, err := gabi.ParseSignature(rawSig)
+			if err != nil {
+				return err
+			}
+			s.IssueSignatures = append(s.IssueSignatures, sig)
+		}
+		return nil
 	}
+
 	if s.SessionType != ActionIssuing {
 		return json.Unmarshal(bts, &s.ProofStatus)
 	}
 
-	err := json.Unmarshal(bts, &s.IssueSignatures)
-	if err != nil {
+	// legacy: signatures are the entire response body
+	var rawSigs []json.RawMessage
+	if err := json.Unmarshal(bts, &rawSigs); err != nil {
 		return err
+	}
+	for _, rawSig := range rawSigs {
+		sig, err := gabi.ParseSignature(rawSig)
+		if err != nil {
+			return err
+		}
+		s.IssueSignatures = append(s.IssueSignatures, sig)
 	}
 	s.ProofStatus = ProofStatusValid
 	return nil
