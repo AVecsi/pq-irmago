@@ -103,19 +103,19 @@ func TimestampRequest(message string, sigs []*big.Int, disclosed [][]*big.Int, n
 func (sm *SignedMessage) VerifyTimestamp(message string, conf *Configuration) error {
 	// Extract the disclosed attributes and randomized CL-signatures from the proofs in order to
 	// construct the nonce that should be signed by the timestamp server.
-	size := len(sm.Signature.CredentialDisclosures)
+	size := len(sm.Signature.CredentialDisclosures())
 	sigs := make([]*big.Int, size)
 	disclosed := make([][]*big.Int, size)
-	for i, proofd := range sm.Signature.CredentialDisclosures {
-		sigs[i] = new(big.Int).SetBytes(proofd.SignatureProof.Proof)
-		ct := MetadataFromInt(proofd.DisclosedAttributes[1].IntValue(), conf).CredentialType()
+	for i, proofd := range sm.Signature.CredentialDisclosures() {
+		sigs[i] = new(big.Int).SetBytes(proofd.SignatureProof().ProofBytes())
+		ct := MetadataFromInt(proofd.DisclosedAttributes()[1].IntValue(), conf).CredentialType()
 		if ct == nil {
 			return errors.New("Cannot verify timestamp: signature contains attributes from unknown credential type")
 		}
 		attrcount := len(ct.AttributeTypes) + 2 // plus secret key and metadata
 		disclosed[i] = make([]*big.Int, attrcount)
 		for j := 0; j < attrcount; j++ {
-			disclosed[i][j] = proofd.DisclosedAttributes[j].IntValue()
+			disclosed[i][j] = proofd.DisclosedAttributes()[j].IntValue()
 		}
 	}
 

@@ -145,7 +145,7 @@ func (session *sessionData) checkCache(endpoint string, message []byte) (int, []
 }
 
 func (session *sessionData) computeAttributes(
-	sk *gabikeys.PrivateKey, cred *irma.CredentialRequest, conf *server.Configuration,
+	sk gabikeys.PrivateKey, cred *irma.CredentialRequest, conf *server.Configuration,
 ) ([]*gabi.Attribute, error) {
 
 	issuedAt := time.Now()
@@ -174,7 +174,7 @@ func (s *Server) validateIssuanceRequest(request *irma.IssuanceRequest) error {
 		if privatekey == nil {
 			return errors.Errorf("missing private key of issuer %s", iss.String())
 		}
-		pubkey, err := s.conf.IrmaConfiguration.PublicKey(iss, privatekey.Counter)
+		pubkey, err := s.conf.IrmaConfiguration.PublicKey(iss, privatekey.GetCounter())
 		if err != nil {
 			return err
 		}
@@ -182,10 +182,10 @@ func (s *Server) validateIssuanceRequest(request *irma.IssuanceRequest) error {
 			return errors.Errorf("missing public key of issuer %s", iss.String())
 		}
 		now := time.Now()
-		if now.Unix() > pubkey.ExpiryDate {
-			return errors.Errorf("cannot issue using expired public key %s-%d", iss.String(), privatekey.Counter)
+		if now.Unix() > pubkey.GetExpiryDate() {
+			return errors.Errorf("cannot issue using expired public key %s-%d", iss.String(), privatekey.GetCounter())
 		}
-		cred.KeyCounter = privatekey.Counter
+		cred.KeyCounter = privatekey.GetCounter()
 
 		if s.conf.IrmaConfiguration.CredentialTypes[cred.CredentialTypeID].RevocationSupported() {
 			if cred.RevocationKey == "" {

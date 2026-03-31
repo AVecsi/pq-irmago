@@ -2,7 +2,7 @@ package cmd
 
 //TODO VADAM
 import (
-	"github.com/AVecsi/pq-gabi/gabikeys"
+	gabi "github.com/AVecsi/pq-gabi"
 	"github.com/spf13/cobra"
 )
 
@@ -14,7 +14,7 @@ This is required before credential types requiring revocation can be issued unde
 (New keypairs generated with "irma scheme issuer keygen" already support revocation.)`,
 	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		sk, err := gabikeys.NewPrivateKeyFromFile(args[0], false)
+		sk, err := gabi.NewPrivateKeyFromFile(args[0], false)
 		if err != nil {
 			die("failed to read private key", err)
 		}
@@ -22,7 +22,7 @@ This is required before credential types requiring revocation can be issued unde
 		// 	die("private key already supports revocation", nil)
 		// }
 
-		pk, err := gabikeys.NewPublicKeyFromFile(args[1])
+		pk, err := gabi.NewPublicKeyFromFile(args[1])
 		if err != nil {
 			die("failed to read public key", err)
 		}

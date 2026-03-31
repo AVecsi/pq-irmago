@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/AVecsi/pq-gabi/gabikeys"
+	gabi "github.com/AVecsi/pq-gabi"
 	"github.com/AVecsi/pq-irmago/internal/common"
 	"github.com/go-errors/errors"
 	"github.com/spf13/cobra"
@@ -89,7 +89,7 @@ IRMA applications.`,
 		fmt.Println("Generating keys (may take several minutes)")
 		//TODO VADAM seed should be random
 		seed := make([]byte, 32)
-		privk, pubk, err := gabikeys.GenerateKeyPair(seed, counter, expiryDate)
+		privk, pubk, err := gabi.GenerateKeyPair(seed, counter, expiryDate)
 		if err != nil {
 			return err
 		}

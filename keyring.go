@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 
+	gabi "github.com/AVecsi/pq-gabi"
 	"github.com/AVecsi/pq-gabi/gabikeys"
 	"github.com/AVecsi/pq-irmago/internal/common"
 	"github.com/go-errors/errors"
@@ -18,16 +19,16 @@ type (
 	PrivateKeyRing interface {
 		// Latest returns the private key with the highest counter for the specified issuer, if any,
 		// or an error.
-		Latest(id IssuerIdentifier) (*gabikeys.PrivateKey, error)
+		Latest(id IssuerIdentifier) (gabikeys.PrivateKey, error)
 
 		// Get returns the specified private key, or an error.
-		Get(id IssuerIdentifier, counter uint) (*gabikeys.PrivateKey, error)
+		Get(id IssuerIdentifier, counter uint) (gabikeys.PrivateKey, error)
 
 		// Iterate executes the specified function on each private key of the specified issuer
 		// present in the ring. The private keys are offered to the function in no particular order,
 		// and the same key may be offered multiple times. Returns on the first error returned
 		// by the function.
-		Iterate(id IssuerIdentifier, f func(sk *gabikeys.PrivateKey) error) error
+		Iterate(id IssuerIdentifier, f func(sk gabikeys.PrivateKey) error) error
 	}
 
 	// PrivateKeyRingFolder represents a folder on disk containing private keys with filenames
@@ -73,8 +74,8 @@ func NewPrivateKeyRingFolder(path string, conf *Configuration) (*PrivateKeyRingF
 		if err != nil {
 			return nil, err
 		}
-		if counter != nil && *counter != sk.Counter {
-			return nil, errors.Errorf("private key %s has wrong counter %d in filename, should be %d", filename, counter, sk.Counter)
+		if counter != nil && *counter != sk.GetCounter() {
+			return nil, errors.Errorf("private key %s has wrong counter %d in filename, should be %d", filename, counter, sk.GetCounter())
 		}
 	}
 	return ring, nil
@@ -102,12 +103,12 @@ func (*PrivateKeyRingFolder) parseFilename(filename string) (*IssuerIdentifier, 
 	return &issuerid, &c, nil
 }
 
-func (p *PrivateKeyRingFolder) readFile(filename string, id IssuerIdentifier) (*gabikeys.PrivateKey, error) {
+func (p *PrivateKeyRingFolder) readFile(filename string, id IssuerIdentifier) (gabikeys.PrivateKey, error) {
 	scheme := p.conf.SchemeManagers[id.SchemeManagerIdentifier()]
 	if scheme == nil {
 		return nil, errors.Errorf("Private key of issuer %s belongs to unknown scheme", id.String())
 	}
-	sk, err := gabikeys.NewPrivateKeyFromFile(filepath.Join(p.path, filename), scheme.Demo)
+	sk, err := gabi.NewPrivateKeyFromFile(filepath.Join(p.path, filename), scheme.Demo)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +118,7 @@ func (p *PrivateKeyRingFolder) readFile(filename string, id IssuerIdentifier) (*
 	return sk, nil
 }
 
-func (p *PrivateKeyRingFolder) Get(id IssuerIdentifier, counter uint) (*gabikeys.PrivateKey, error) {
+func (p *PrivateKeyRingFolder) Get(id IssuerIdentifier, counter uint) (gabikeys.PrivateKey, error) {
 	sk, err := p.readFile(fmt.Sprintf("%s.%d.xml", id.String(), counter), id)
 	if err != nil && !goerrors.Is(err, os.ErrNotExist) {
 		return nil, err
@@ -129,16 +130,16 @@ func (p *PrivateKeyRingFolder) Get(id IssuerIdentifier, counter uint) (*gabikeys
 	if err != nil {
 		return nil, err
 	}
-	if counter != sk.Counter {
+	if counter != sk.GetCounter() {
 		return nil, ErrMissingPrivateKey
 	}
 	return sk, nil
 }
 
-func (p *PrivateKeyRingFolder) Latest(id IssuerIdentifier) (*gabikeys.PrivateKey, error) {
-	var sk *gabikeys.PrivateKey
-	if err := p.Iterate(id, func(s *gabikeys.PrivateKey) error {
-		if sk == nil || s.Counter > sk.Counter {
+func (p *PrivateKeyRingFolder) Latest(id IssuerIdentifier) (gabikeys.PrivateKey, error) {
+	var sk gabikeys.PrivateKey
+	if err := p.Iterate(id, func(s gabikeys.PrivateKey) error {
+		if sk == nil || s.GetCounter() > sk.GetCounter() {
 			sk = s
 		}
 		return nil
@@ -151,7 +152,7 @@ func (p *PrivateKeyRingFolder) Latest(id IssuerIdentifier) (*gabikeys.PrivateKey
 	return sk, nil
 }
 
-func (p *PrivateKeyRingFolder) Iterate(id IssuerIdentifier, f func(sk *gabikeys.PrivateKey) error) error {
+func (p *PrivateKeyRingFolder) Iterate(id IssuerIdentifier, f func(sk gabikeys.PrivateKey) error) error {
 	files, err := filepath.Glob(filepath.Join(p.path, fmt.Sprintf("%s.*.xml", id.String())))
 	if err != nil {
 		return err
@@ -189,18 +190,18 @@ func (p *privateKeyRingScheme) counters(issuerid IssuerIdentifier) (i []uint, er
 	return matchKeyPattern(filepath.Join(scheme.path(), issuerid.Name(), "PrivateKeys", "*"))
 }
 
-func (p *privateKeyRingScheme) Get(id IssuerIdentifier, counter uint) (*gabikeys.PrivateKey, error) {
+func (p *privateKeyRingScheme) Get(id IssuerIdentifier, counter uint) (gabikeys.PrivateKey, error) {
 	schemeID := id.SchemeManagerIdentifier()
 	scheme := p.conf.SchemeManagers[schemeID]
 	if scheme == nil {
 		return nil, errors.Errorf("Private key of issuer %s belongs to unknown scheme", id.String())
 	}
 	file := filepath.Join(scheme.path(), id.Name(), "PrivateKeys", strconv.FormatUint(uint64(counter), 10)+".xml")
-	sk, err := gabikeys.NewPrivateKeyFromFile(file, scheme.Demo)
+	sk, err := gabi.NewPrivateKeyFromFile(file, scheme.Demo)
 	if err != nil {
 		return nil, err
 	}
-	if sk.Counter != counter {
+	if sk.GetCounter() != counter {
 		return nil, errors.Errorf("Private key %s of issuer %s has wrong <Counter>", file, id.String())
 	}
 	if err = validatePrivateKey(id, sk, p.conf); err != nil {
@@ -209,7 +210,7 @@ func (p *privateKeyRingScheme) Get(id IssuerIdentifier, counter uint) (*gabikeys
 	return sk, nil
 }
 
-func (p *privateKeyRingScheme) Latest(id IssuerIdentifier) (*gabikeys.PrivateKey, error) {
+func (p *privateKeyRingScheme) Latest(id IssuerIdentifier) (gabikeys.PrivateKey, error) {
 	counters, err := p.counters(id)
 	if err != nil {
 		return nil, err
@@ -220,7 +221,7 @@ func (p *privateKeyRingScheme) Latest(id IssuerIdentifier) (*gabikeys.PrivateKey
 	return p.Get(id, counters[len(counters)-1])
 }
 
-func (p *privateKeyRingScheme) Iterate(id IssuerIdentifier, f func(sk *gabikeys.PrivateKey) error) error {
+func (p *privateKeyRingScheme) Iterate(id IssuerIdentifier, f func(sk gabikeys.PrivateKey) error) error {
 	indices, err := p.counters(id)
 	if err != nil {
 		return err
@@ -241,7 +242,7 @@ func (p *privateKeyRingMerge) Add(ring PrivateKeyRing) {
 	p.rings = append(p.rings, ring)
 }
 
-func (p *privateKeyRingMerge) Get(id IssuerIdentifier, counter uint) (*gabikeys.PrivateKey, error) {
+func (p *privateKeyRingMerge) Get(id IssuerIdentifier, counter uint) (gabikeys.PrivateKey, error) {
 	for _, ring := range p.rings {
 		sk, err := ring.Get(id, counter)
 		if err == nil {
@@ -254,14 +255,14 @@ func (p *privateKeyRingMerge) Get(id IssuerIdentifier, counter uint) (*gabikeys.
 	return nil, ErrMissingPrivateKey
 }
 
-func (p *privateKeyRingMerge) Latest(id IssuerIdentifier) (*gabikeys.PrivateKey, error) {
-	var sk *gabikeys.PrivateKey
+func (p *privateKeyRingMerge) Latest(id IssuerIdentifier) (gabikeys.PrivateKey, error) {
+	var sk gabikeys.PrivateKey
 	for _, ring := range p.rings {
 		s, err := ring.Latest(id)
 		if err != nil && !goerrors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
-		if s != nil && (sk == nil || s.Counter > sk.Counter) {
+		if s != nil && (sk == nil || s.GetCounter() > sk.GetCounter()) {
 			sk = s
 		}
 	}
@@ -271,7 +272,7 @@ func (p *privateKeyRingMerge) Latest(id IssuerIdentifier) (*gabikeys.PrivateKey,
 	return sk, nil
 }
 
-func (p *privateKeyRingMerge) Iterate(id IssuerIdentifier, f func(sk *gabikeys.PrivateKey) error) error {
+func (p *privateKeyRingMerge) Iterate(id IssuerIdentifier, f func(sk gabikeys.PrivateKey) error) error {
 	for _, ring := range p.rings {
 		if err := ring.Iterate(id, f); err != nil {
 			return err
@@ -280,23 +281,23 @@ func (p *privateKeyRingMerge) Iterate(id IssuerIdentifier, f func(sk *gabikeys.P
 	return nil
 }
 
-func validatePrivateKey(issuerid IssuerIdentifier, sk *gabikeys.PrivateKey, conf *Configuration) error {
+func validatePrivateKey(issuerid IssuerIdentifier, sk gabikeys.PrivateKey, conf *Configuration) error {
 	if _, ok := conf.Issuers[issuerid]; !ok {
-		return errors.Errorf("Private key %d of issuer %s belongs to an unknown issuer", sk.Counter, issuerid.String())
+		return errors.Errorf("Private key %d of issuer %s belongs to an unknown issuer", sk.GetCounter(), issuerid.String())
 	}
-	pk, err := conf.PublicKey(issuerid, sk.Counter)
+	pk, err := conf.PublicKey(issuerid, sk.GetCounter())
 	if err != nil {
 		return err
 	}
 	if pk == nil {
-		return errors.Errorf("Private key %d of issuer %s has no corresponding public key", sk.Counter, issuerid.String())
+		return errors.Errorf("Private key %d of issuer %s has no corresponding public key", sk.GetCounter(), issuerid.String())
 	}
 	return nil
 }
 
 func validatePrivateKeyRing(ring PrivateKeyRing, conf *Configuration) error {
 	for issuerid := range conf.Issuers {
-		err := ring.Iterate(issuerid, func(sk *gabikeys.PrivateKey) error {
+		err := ring.Iterate(issuerid, func(sk gabikeys.PrivateKey) error {
 			return validatePrivateKey(issuerid, sk, conf)
 		})
 		if err != nil {

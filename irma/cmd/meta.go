@@ -65,7 +65,7 @@ func printMetadataAttr(metaint *big.Int, confPath string, confAssetsPath string)
 
 	meta := irma.MetadataFromInt(metaint, conf)
 	typ := meta.CredentialType()
-	var key *gabikeys.PublicKey
+	var key gabikeys.PublicKey
 
 	if typ == nil {
 		fmt.Println("Unknown credential type, hash:", base64.StdEncoding.EncodeToString(meta.CredentialTypeHash()))
@@ -82,7 +82,7 @@ func printMetadataAttr(metaint *big.Int, confPath string, confAssetsPath string)
 	fmt.Println("Version         :", meta.Version())
 	fmt.Println("KeyCounter      :", meta.KeyCounter())
 	if key != nil {
-		fmt.Println("KeyExpires      :", time.Unix(key.ExpiryDate, 0))
+		fmt.Println("KeyExpires      :", time.Unix(key.GetExpiryDate(), 0))
 		//fmt.Println("KeyModulusBitlen:", key.N.BitLen())
 	}
 

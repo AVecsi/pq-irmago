@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	gabi "github.com/AVecsi/pq-gabi"
 	"github.com/AVecsi/pq-irmago/internal/concmap"
 	"github.com/go-co-op/gocron"
 
@@ -34,7 +35,7 @@ type Configuration struct {
 	CredentialTypes map[CredentialTypeIdentifier]*CredentialType
 	AttributeTypes  map[AttributeTypeIdentifier]*AttributeType
 	kssPublicKeys   map[SchemeManagerIdentifier]map[int]*rsa.PublicKey
-	publicKeys      concmap.ConcMap[PublicKeyIdentifier, *gabikeys.PublicKey]
+	publicKeys      concmap.ConcMap[PublicKeyIdentifier, gabikeys.PublicKey]
 	reverseHashes   map[string]CredentialTypeIdentifier
 
 	// RequestorScheme data of the currently loaded requestorscheme
@@ -303,7 +304,7 @@ func (conf *Configuration) AddPrivateKeyRing(ring PrivateKeyRing) error {
 }
 
 // PublicKey returns the specified public key, or nil if not present in the Configuration.
-func (conf *Configuration) PublicKey(id IssuerIdentifier, counter uint) (*gabikeys.PublicKey, error) {
+func (conf *Configuration) PublicKey(id IssuerIdentifier, counter uint) (gabikeys.PublicKey, error) {
 	// If we have not seen this issuer or key before in conf.publicKeys,
 	// try to parse the public key folder; new keys might have been put there since we last parsed it
 	if !conf.publicKeys.IsSet(PublicKeyIdentifier{id, counter}) {
@@ -315,7 +316,7 @@ func (conf *Configuration) PublicKey(id IssuerIdentifier, counter uint) (*gabike
 }
 
 // PublicKeyLatest returns the latest private key of the specified issuer.
-func (conf *Configuration) PublicKeyLatest(id IssuerIdentifier) (*gabikeys.PublicKey, error) {
+func (conf *Configuration) PublicKeyLatest(id IssuerIdentifier) (gabikeys.PublicKey, error) {
 	indices, err := conf.PublicKeyIndices(id)
 	if err != nil {
 		return nil, err
@@ -353,12 +354,12 @@ func (conf *Configuration) ValidateKeys() error {
 		// Check expiry date public keys only if issuer is not deprecated
 		now := time.Now()
 		if issuer.DeprecatedSince.IsZero() || issuer.DeprecatedSince.After(Timestamp(now)) {
-			if latest == nil || latest.ExpiryDate < now.Unix() {
+			if latest == nil || latest.GetExpiryDate() < now.Unix() {
 				conf.Warnings = append(conf.Warnings, fmt.Sprintf("Issuer %s has no nonexpired public keys", issuerid.String()))
 			}
-			if latest != nil && latest.ExpiryDate > now.Unix() && latest.ExpiryDate < now.Unix()+expiryBoundary {
+			if latest != nil && latest.GetExpiryDate() > now.Unix() && latest.GetExpiryDate() < now.Unix()+expiryBoundary {
 				conf.Warnings = append(conf.Warnings, fmt.Sprintf("Latest public key of issuer %s expires soon (at %s)",
-					issuerid.String(), time.Unix(latest.ExpiryDate, 0).String()))
+					issuerid.String(), time.Unix(latest.GetExpiryDate(), 0).String()))
 			}
 		}
 	}
@@ -459,14 +460,14 @@ func (conf *Configuration) parseKeysFolder(issuerid IssuerIdentifier) error {
 		if err != nil || !found {
 			return err
 		}
-		pk, err := gabikeys.NewPublicKeyFromBytes(bts)
+		pk, err := gabi.NewPublicKeyFromBytes(bts)
 		if err != nil {
 			return err
 		}
-		if pk.Counter != uint(i) {
+		if pk.GetCounter() != uint(i) {
 			return errors.Errorf("Public key %s of issuer %s has wrong <Counter>", file, issuerid.String())
 		}
-		pk.Issuer = issuerid.String()
+		pk.SetIssuer(issuerid.String())
 		conf.publicKeys.Set(PublicKeyIdentifier{issuerid, uint(i)}, pk)
 	}
 
@@ -505,7 +506,7 @@ func (conf *Configuration) clear() {
 	conf.IssueWizards = make(map[IssueWizardIdentifier]*IssueWizard)
 	conf.DisabledRequestorSchemes = make(map[RequestorSchemeIdentifier]*SchemeManagerError)
 	conf.kssPublicKeys = make(map[SchemeManagerIdentifier]map[int]*rsa.PublicKey)
-	conf.publicKeys = concmap.New[PublicKeyIdentifier, *gabikeys.PublicKey]()
+	conf.publicKeys = concmap.New[PublicKeyIdentifier, gabikeys.PublicKey]()
 	conf.reverseHashes = make(map[string]CredentialTypeIdentifier)
 	if conf.PrivateKeys == nil { // keep if already populated
 		conf.PrivateKeys = &privateKeyRingMerge{}
@@ -786,7 +787,7 @@ func (conf *Configuration) join(other *Configuration) {
 	for key, val := range other.DisabledRequestorSchemes {
 		conf.DisabledRequestorSchemes[key] = val
 	}
-	other.publicKeys.Iterate(func(key PublicKeyIdentifier, val *gabikeys.PublicKey) {
+	other.publicKeys.Iterate(func(key PublicKeyIdentifier, val gabikeys.PublicKey) {
 		conf.publicKeys.Set(key, val)
 	})
 

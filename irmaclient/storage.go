@@ -46,7 +46,7 @@ const (
 
 	attributesBucket = "attrs" // Key: []byte, value: []*irma.AttributeList
 	logsBucket       = "logs"  // Key: (auto-increment index), value: *LogEntry
-	signaturesBucket = "sigs"  // Key: credential.attrs.Hash, value: *gabi.ZkDilSignature
+	signaturesBucket = "sigs"  // Key: credential.attrs.Hash, value: gabi.Signature
 )
 
 func (s *storage) path(p string) string {
@@ -147,8 +147,8 @@ func (s *storage) TxDeleteAllSignatures(tx *transaction) error {
 	return tx.DeleteBucket([]byte(signaturesBucket))
 }
 
-type zkDilSignatureWitness struct {
-	*gabi.ZkDilSignature
+type SignatureWitness struct {
+	gabi.Signature
 }
 
 func (s *storage) StoreSignature(cred *credential) error {
@@ -158,12 +158,12 @@ func (s *storage) StoreSignature(cred *credential) error {
 }
 
 func (s *storage) TxStoreSignature(tx *transaction, cred *credential) error {
-	return s.TxStoreZkDilSignature(tx, cred.attrs.Hash(), &zkDilSignatureWitness{
-		ZkDilSignature: cred.Signature,
+	return s.TxStoreZkDilSignature(tx, cred.attrs.Hash(), &SignatureWitness{
+		Signature: cred.Signature(),
 	})
 }
 
-func (s *storage) TxStoreZkDilSignature(tx *transaction, credHash string, sig *zkDilSignatureWitness) error {
+func (s *storage) TxStoreZkDilSignature(tx *transaction, credHash string, sig *SignatureWitness) error {
 	// We take the SHA256 hash over all attributes as the bucket key for the signature.
 	// This means that of the signatures of two credentials that have identical attributes
 	// only one gets stored, one overwriting the other - but that doesn't
@@ -320,7 +320,7 @@ func (s *storage) TxStoreUpdates(tx *transaction, updates []update) error {
 	return s.txStore(tx, userdataBucket, updatesKey, updates)
 }
 
-func (s *storage) LoadSignature(attrs *irma.AttributeList) (*gabi.ZkDilSignature, error) {
+func (s *storage) LoadSignature(attrs *irma.AttributeList) (gabi.Signature, error) {
 	credType := attrs.CredentialType()
 	if credType == nil {
 		return nil, errors.New("credential not known in configuration")
@@ -329,14 +329,14 @@ func (s *storage) LoadSignature(attrs *irma.AttributeList) (*gabi.ZkDilSignature
 		return nil, errors.Errorf("scheme %s is disabled", credType.SchemeManagerIdentifier())
 	}
 
-	sig := new(zkDilSignatureWitness)
+	sig := new(SignatureWitness)
 	found, err := s.load(signaturesBucket, attrs.Hash(), sig)
 	if err != nil {
 		return nil, err
 	} else if !found {
 		return nil, errors.Errorf("signature of credential with hash %s cannot be found", attrs.Hash())
 	}
-	return sig.ZkDilSignature, nil
+	return sig.Signature, nil
 }
 
 // LoadSecretKey retrieves and returns the secret key from bbolt storage, or if no secret key
@@ -383,7 +383,7 @@ func (s *storage) LoadAttributes() (list map[irma.CredentialTypeIdentifier][]*ir
 
 			// Initialize metadata attributes
 			for _, attrlist := range attrlistlist {
-				attrlist.MetadataAttribute = irma.MetadataFromInt(attrlist.Ints[0], s.Configuration)
+				attrlist.MetadataAttribute = irma.MetadataFromInt(attrlist.Ints[2], s.Configuration)
 			}
 
 			credType := attrlistlist[0].CredentialType()

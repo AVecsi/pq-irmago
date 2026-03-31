@@ -8,8 +8,8 @@ import (
 	"time"
 
 	gabi "github.com/AVecsi/pq-gabi"
+	"github.com/AVecsi/pq-gabi/attribute"
 	"github.com/AVecsi/pq-gabi/big"
-	"github.com/AVecsi/pq-gabi/poseidon"
 	irma "github.com/AVecsi/pq-irmago"
 	"github.com/AVecsi/pq-irmago/internal/common"
 	"github.com/AVecsi/pq-irmago/internal/concmap"
@@ -564,37 +564,23 @@ func (client *Client) credential(id irma.CredentialTypeIdentifier, counter int) 
 
 	gabiAttributes = append(gabiAttributes, gabi.NewAttribute(client.secretkey.Key.Bytes()))
 
-	//TODO this should be a random nonce in practice
-	gabiAttributes = append(gabiAttributes, gabi.NewAttribute(client.secretkey.Key.Bytes()))
+	hiddenHash, salt, err := gabi.HideAttributes(gabiAttributes)
+	if err != nil {
+		return nil, err
+	}
 
 	for i := range attrs.Ints {
 		gabiAttributes = append(gabiAttributes, gabi.NewAttribute(attrs.Ints[i].Bytes()))
 	}
 
-	//TODO
-	h := poseidon.NewPoseidon(nil, gabi.POS_RF, gabi.POS_T, gabi.POS_RATE, 7340033)
-	h.Write(gabiAttributes[0].Hash)
-	h.Write(gabiAttributes[1].Hash)
-	hiddenHashFes := h.Read(12)
+	combinedHash := gabi.CombineHiddenPublic(hiddenHash, gabiAttributes[1:])
 
-	h.Reset()
-	for i := 2; i < len(gabiAttributes); i += 1 {
-		h.Write(gabiAttributes[i].Hash)
+	gabiCred, err := gabi.NewCredential(sig, gabiAttributes, len(gabiAttributes), 1, combinedHash, salt)
+	if err != nil {
+		return nil, err
 	}
 
-	publicHashFes := h.Read(12)
-
-	h.Reset()
-	h.WriteInts(hiddenHashFes)
-	h.WriteInts(publicHashFes)
-
-	combinedHash := h.ReadUint32(12)
-
-	cred, err = newCredential(&gabi.Credential{
-		Signature:  sig,
-		Attributes: gabiAttributes,
-		CredHash:   combinedHash,
-	}, attrs, client.Configuration)
+	cred, err = newCredential(gabiCred, attrs, client.Configuration)
 	if err != nil {
 		return nil, err
 	}
@@ -905,23 +891,26 @@ func (client *Client) groupCredentials(choice *irma.DisclosureChoice) (
 
 // ProofBuilders constructs a list of proof builders for the specified attribute choice.
 func (client *Client) ProofBuilders(choice *irma.DisclosureChoice, request irma.SessionRequest,
-) (*gabi.DisclosureProof, irma.DisclosedAttributeIndices, *atum.Timestamp, error) {
+) (gabi.DisclosureProof, irma.DisclosedAttributeIndices, *atum.Timestamp, error) {
 
 	todisclose, attributeIndices, err := client.groupCredentials(choice)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	var credDisclosures []*gabi.CredentialDisclosure
-	var credDisclosure *gabi.CredentialDisclosure
-	var creds []*gabi.Credential
+	var credDisclosures []gabi.CredentialDisclosure
+	//var credDisclosure *gabi.CredentialDisclosure
+	var creds []gabi.Credential
 	for _, grp := range todisclose {
 		cred, err := client.credentialByID(grp.cred)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 
-		credDisclosure = gabi.CreateCredentialDisclosure(cred.Credential, grp.attrs)
+		credDisclosure, err := cred.CreateDisclosure(grp.attrs)
+		if err != nil {
+			return nil, nil, nil, err
+		}
 
 		credDisclosures = append(credDisclosures, credDisclosure)
 
@@ -934,9 +923,9 @@ func (client *Client) ProofBuilders(choice *irma.DisclosureChoice, request irma.
 		var disclosed [][]*big.Int
 		var d []*big.Int
 		for _, credDisclosure := range credDisclosures {
-			sigs = append(sigs, new(big.Int).SetBytes(credDisclosure.SignatureProof.Proof))
-			for i := range len(credDisclosure.DisclosedAttributes) {
-				d = append(d, credDisclosure.DisclosedAttributes[i].IntValue())
+			sigs = append(sigs, new(big.Int).SetBytes(credDisclosure.SignatureProof().ProofBytes()))
+			for _, disclAttr := range credDisclosure.DisclosedAttributes() {
+				d = append(d, disclAttr.IntValue())
 			}
 			disclosed = append(disclosed, d)
 		}
@@ -946,10 +935,13 @@ func (client *Client) ProofBuilders(choice *irma.DisclosureChoice, request irma.
 		}
 	}
 
-	disclosureProof := new(gabi.DisclosureProof)
+	var disclosureProof gabi.DisclosureProof
 	//TODO VADAM request.GetNonce(timestamp)
 	if len(creds) != 0 {
-		disclosureProof, err = gabi.CreateDisclosureProof(creds, credDisclosures)
+		disclosureProof, err = gabi.CreateDisclosureProof(
+			creds,
+			credDisclosures,
+		)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -966,7 +958,7 @@ func (client *Client) Proofs(choice *irma.DisclosureChoice, request irma.Session
 	}
 
 	return &irma.Disclosure{
-		Proofs:  *disclosureProof,
+		Proofs:  disclosureProof,
 		Indices: choices,
 	}, timestamp, nil
 }
@@ -1006,11 +998,11 @@ func (client *Client) IssueCommitments(request *irma.IssuanceRequest, choice *ir
 
 // ConstructCredentials constructs and saves new credentials using the specified issuance signature messages
 // and credential builders.
-func (client *Client) ConstructCredentials(msg []*gabi.ZkDilSignature, request *irma.IssuanceRequest) error {
+func (client *Client) ConstructCredentials(msg []gabi.Signature, request *irma.IssuanceRequest) error {
 
 	// First collect all credentials in a slice, so that if one of them induces an error,
 	// we save none of them to fail the session cleanly
-	gabicreds := []*gabi.Credential{}
+	gabicreds := []gabi.Credential{}
 	for i, sig := range msg {
 
 		issuedAt := time.Now()
@@ -1027,33 +1019,22 @@ func (client *Client) ConstructCredentials(msg []*gabi.ZkDilSignature, request *
 		var gabiAttributes []*gabi.Attribute
 
 		gabiAttributes = append(gabiAttributes, gabi.NewAttribute(client.secretkey.Key.Bytes()))
-		//TODO this should be a random nonce in practice
-		gabiAttributes = append(gabiAttributes, gabi.NewAttribute(client.secretkey.Key.Bytes()))
+
+		hiddenHash, salt, err := gabi.HideAttributes(gabiAttributes)
+		if err != nil {
+			return err
+		}
 
 		for i := range attrs.Ints {
 			gabiAttributes = append(gabiAttributes, gabi.NewAttribute(attrs.Ints[i].Bytes()))
 		}
 
-		//TODO
-		h := poseidon.NewPoseidon(nil, gabi.POS_RF, gabi.POS_T, gabi.POS_RATE, 7340033)
-		h.Write(gabiAttributes[0].Hash)
-		h.Write(gabiAttributes[1].Hash)
-		hiddenHashFes := h.Read(12)
+		combinedHash := gabi.CombineHiddenPublic(hiddenHash, gabiAttributes[1:])
 
-		h.Reset()
-		for i := 2; i < len(gabiAttributes); i += 1 {
-			h.Write(gabiAttributes[i].Hash)
+		cred, err := gabi.NewCredential(sig, gabiAttributes, len(gabiAttributes), 1, combinedHash, salt)
+		if err != nil {
+			return err
 		}
-
-		publicHashFes := h.Read(12)
-
-		h.Reset()
-		h.WriteInts(hiddenHashFes)
-		h.WriteInts(publicHashFes)
-
-		combinedHash := h.ReadUint32(12)
-
-		cred := &gabi.Credential{Signature: sig, Attributes: gabiAttributes, UserAttrCount: 2, CredHash: combinedHash}
 
 		gabicreds = append(gabicreds, cred)
 	}
@@ -1062,7 +1043,8 @@ func (client *Client) ConstructCredentials(msg []*gabi.ZkDilSignature, request *
 
 		attrInts := []*big.Int{}
 
-		for _, attr := range gabicred.Attributes {
+		//This already has the secret attribute
+		for _, attr := range gabicred.Attributes() {
 			attrInts = append(attrInts, attr.IntValue())
 		}
 
@@ -1239,13 +1221,13 @@ func (client *Client) ConfigurationUpdated(downloaded *irma.IrmaIdentifierSet) e
 				return nil
 			}
 
-			var gabiAttributes []*gabi.Attribute
-
-			for i := range attrs {
-				gabiAttributes = append(gabiAttributes, gabi.NewAttribute(attrs[i].Bytes()))
+			gabiAttributes := make([]*attribute.Attribute, len(attrs))
+			for i, a := range attrs {
+				gabiAttributes[i] = gabi.NewAttribute(a.Bytes())
 			}
-
-			cred.Attributes = append(cred.Attributes[:1], gabiAttributes...)
+			if err := cred.UpdateAttributes(1, gabiAttributes); err != nil {
+				return err
+			}
 		}
 	}
 

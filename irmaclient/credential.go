@@ -8,13 +8,14 @@ import (
 // credential represents an IRMA credential, whose zeroth attribute
 // is always the secret key and the first attribute the metadata attribute.
 type credential struct {
-	*gabi.Credential
+	gabi.Credential
 	*irma.MetadataAttribute
 	attrs *irma.AttributeList
 }
 
-func newCredential(gabicred *gabi.Credential, attrs *irma.AttributeList, conf *irma.Configuration) (*credential, error) {
-	meta := irma.MetadataFromInt(gabicred.Attributes[1].IntValue(), conf)
+func newCredential(gabicred gabi.Credential, attrs *irma.AttributeList, conf *irma.Configuration) (*credential, error) {
+	//TODO IMPORTANT it might be the 0th now with the new gabi
+	meta := irma.MetadataFromInt(gabicred.Attributes()[1].IntValue(), conf)
 	cred := &credential{
 		Credential:        gabicred,
 		MetadataAttribute: meta,

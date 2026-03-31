@@ -8,8 +8,8 @@ import (
 	"time"
 
 	gabi "github.com/AVecsi/pq-gabi"
+	"github.com/AVecsi/pq-gabi/attribute"
 	"github.com/AVecsi/pq-gabi/gabikeys"
-	"github.com/AVecsi/pq-gabi/poseidon"
 	irma "github.com/AVecsi/pq-irmago"
 	"github.com/AVecsi/pq-irmago/internal/common"
 	"github.com/AVecsi/pq-irmago/server"
@@ -158,7 +158,7 @@ func (session *sessionData) handlePostCommitments(commitments *irma.IssueCommitm
 	request := session.Rrequest.SessionRequest().(*irma.IssuanceRequest)
 
 	// Compute list of public keys against which to verify the received proofs
-	var pubkeys = []*gabikeys.PublicKey{}
+	var pubkeys = []gabikeys.PublicKey{}
 	for _, cred := range request.Credentials {
 		iss := cred.CredentialTypeID.IssuerIdentifier()
 		pubkey, _ := conf.IrmaConfiguration.PublicKey(iss, cred.KeyCounter) // No error, already checked earlier
@@ -187,31 +187,29 @@ func (session *sessionData) handlePostCommitments(commitments *irma.IssueCommitm
 	}
 
 	// Compute CL signatures
-	var sigs []*gabi.ZkDilSignature
+	var sigs []gabi.Signature
 	for _, cred := range request.Credentials {
 		//id := cred.CredentialTypeID.IssuerIdentifier()
 		//pk, _ := conf.IrmaConfiguration.PublicKey(id, cred.KeyCounter)
 		//sk, _ := conf.IrmaConfiguration.PrivateKeys.Latest(id)
 		//TODO probably its not the place where is should get new keypair for the issuer
 		seed := make([]byte, 32)
-		sk, pk, _ := gabikeys.GenerateKeyPair(seed, 0, time.Now().AddDate(1, 0, 0))
-		issuer := gabi.NewIssuer(sk, pk, one)
+		sk, pk, _ := gabi.GenerateKeyPair(seed, 0, time.Now().AddDate(1, 0, 0))
+		issuer := gabi.NewIssuer(sk, pk, *one)
 		attrs, err := session.computeAttributes(sk, cred, conf)
 		if err != nil {
 			return nil, session.fail(server.ErrorIssuanceFailed, err.Error(), conf)
 		}
 		//rb := conf.IrmaConfiguration.CredentialTypes[cred.CredentialTypeID].RandomBlindAttributeIndices()
 
-		//TODO just make it work for now, refactor later
-		attr0 := gabi.NewAttribute(commitments.UserSecret.Bytes())
-		attr1 := gabi.NewAttribute(commitments.UserSecret.Bytes())
+		secretAttr := gabi.NewAttribute(commitments.UserSecret.Bytes())
+		hiddenAttrsHash, _, err := gabi.HideAttributes([]*attribute.Attribute{secretAttr})
+		if err != nil {
+			panic(err)
+		}
 
-		h := poseidon.NewPoseidon(nil, gabi.POS_RF, gabi.POS_T, gabi.POS_RATE, 7340033)
-		h.Write(attr0.Hash)
-		h.Write(attr1.Hash)
-		hiddenHashFes := h.ReadUint32(12)
-
-		sig, err := issuer.IssueSignature(hiddenHashFes, attrs)
+		//TODO Adam here attrs doesnt include the secret, right?
+		sig, _, err := issuer.IssueSignature(hiddenAttrsHash, attrs)
 
 		if err != nil {
 			return nil, session.fail(server.ErrorIssuanceFailed, err.Error(), conf)

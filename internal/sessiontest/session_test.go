@@ -1240,7 +1240,7 @@ func TestParallelSessionsWithPairing(t *testing.T) {
 func expireKey(t *testing.T, conf *irma.Configuration) {
 	pk, err := conf.PublicKey(irma.NewIssuerIdentifier("irma-demo.RU"), 2)
 	require.NoError(t, err)
-	pk.ExpiryDate = 1500000000
+	pk.SetExpiryDate(1500000000)
 }
 
 func TestIssueExpiredKey(t *testing.T) {

@@ -28,7 +28,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/AVecsi/pq-gabi/gabikeys"
+	gabi "github.com/AVecsi/pq-gabi"
 	"github.com/spf13/cobra"
 
 	"github.com/go-errors/errors"
@@ -105,7 +105,7 @@ var genkeypairCmd = &cobra.Command{
 		// Now generate the key pair
 		//TODO VADAM seed should be random
 		seed := make([]byte, 32)
-		privk, pubk, err := gabikeys.GenerateKeyPair(seed, counter, expiryDate)
+		privk, pubk, err := gabi.GenerateKeyPair(seed, counter, expiryDate)
 		if err != nil {
 			return err
 		}

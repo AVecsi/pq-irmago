@@ -38,7 +38,7 @@ type metadataField struct {
 // MetadataAttribute represents a metadata attribute. Contains the credential type, signing date, validity, and the public key counter.
 type MetadataAttribute struct {
 	Int  *big.Int
-	pk   *gabikeys.PublicKey
+	pk   gabikeys.PublicKey
 	Conf *Configuration
 }
 
@@ -130,7 +130,7 @@ func (al *AttributeList) Map() map[AttributeTypeIdentifier]TranslatedString {
 func (al *AttributeList) Strings() []TranslatedString {
 	if al.strings == nil {
 		al.strings = make([]TranslatedString, len(al.Ints)-1)
-		for i := range al.Ints[1:] { // skip metadata
+		for i := range al.Ints[2:] { // skip metadata
 			val := al.decode(i)
 			if val == nil {
 				continue
@@ -265,7 +265,7 @@ func (attr *MetadataAttribute) Bytes() []byte {
 
 // PublicKey extracts identifier of the Idemix public key with which this instance was signed,
 // and returns this public key.
-func (attr *MetadataAttribute) PublicKey() (*gabikeys.PublicKey, error) {
+func (attr *MetadataAttribute) PublicKey() (gabikeys.PublicKey, error) {
 	if attr.pk == nil {
 		var err error
 		attr.pk, err = attr.Conf.PublicKey(attr.CredentialType().IssuerIdentifier(), attr.KeyCounter())

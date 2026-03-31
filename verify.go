@@ -44,22 +44,24 @@ type DisclosedAttribute struct {
 }
 
 // ProofList is a gabi.ProofList with some extra methods.
-type ProofList gabi.DisclosureProof
+type ProofList struct {
+	proof gabi.DisclosureProof
+}
 
 var ErrMissingPublicKey = errors.New("Missing public key")
 
 // ExtractPublicKeys returns the public keys of each proof in the proofList, in the same order,
 // for later use in verification of the proofList. If one of the proofs is not a ProofD
 // an error is returned.
-func (pl ProofList) ExtractPublicKeys(configuration *Configuration) ([]*gabikeys.PublicKey, error) {
-	var publicKeys = make([]*gabikeys.PublicKey, 0, len(pl.CredentialDisclosures))
+func (pl ProofList) ExtractPublicKeys(configuration *Configuration) ([]gabikeys.PublicKey, error) {
+	var publicKeys = make([]gabikeys.PublicKey, 0, len(pl.proof.CredentialDisclosures()))
 
-	for _, v := range pl.CredentialDisclosures {
+	for _, v := range pl.proof.CredentialDisclosures() {
 		common.Logger.Debug("verifying proofs deeper2.0.1\n", v, "\n\n\n")
 		//metadata := MetadataFromInt(v.DisclosedAttributes[1].IntValue(), configuration) // index 1 is metadata attribute
 		//TODO well, for the PoC it will work but its not as intended
 		seed := make([]byte, 32)
-		_, publicKey, err := gabikeys.GenerateKeyPair(seed, 0, time.Now().AddDate(1, 0, 0))
+		_, publicKey, err := gabi.GenerateKeyPair(seed, 0, time.Now().AddDate(1, 0, 0))
 
 		//publicKey, err := metadata.PublicKey()
 		if err != nil {
@@ -80,9 +82,9 @@ func (pl ProofList) Expired(configuration *Configuration, t *time.Time, skipExpi
 		temp := time.Now()
 		t = &temp
 	}
-	for _, proof := range pl.CredentialDisclosures {
+	for _, proof := range pl.proof.CredentialDisclosures() {
 
-		metadata := MetadataFromInt(proof.DisclosedAttributes[1].IntValue(), configuration) // index 1 is metadata attribute
+		metadata := MetadataFromInt(proof.DisclosedAttributes()[1].IntValue(), configuration) // index 1 is metadata attribute
 
 		skipCheck := slices.Contains(skipExpiryCheck, metadata.CredentialType().Identifier())
 		if !skipCheck && metadata.Expiry().Before(*t) {
@@ -93,7 +95,7 @@ func (pl ProofList) Expired(configuration *Configuration, t *time.Time, skipExpi
 		if err != nil {
 			return false, err
 		}
-		if metadata.SigningDate().Unix() > pk.ExpiryDate {
+		if metadata.SigningDate().Unix() > pk.GetExpiryDate() {
 			return true, nil
 		}
 	}
@@ -101,13 +103,14 @@ func (pl ProofList) Expired(configuration *Configuration, t *time.Time, skipExpi
 }
 
 func extractAttribute(pl ProofList, index *DisclosedAttributeIndex, conf *Configuration) (*DisclosedAttribute, *string, error) {
-	if len(pl.CredentialDisclosures) < index.CredentialIndex {
+	if len(pl.proof.CredentialDisclosures()) < index.CredentialIndex {
 		return nil, nil, errors.New("Credential index out of range")
 	}
-	proofd := pl.CredentialDisclosures[index.CredentialIndex]
+	proofd := pl.proof.CredentialDisclosures()[index.CredentialIndex]
 
-	metadata := MetadataFromInt(proofd.DisclosedAttributes[0].IntValue(), conf) // index 1 is metadata attribute
-	attr, str, err := parseAttribute(index.AttributeIndex-1, metadata, proofd.DisclosedAttributes[index.AttributeIndex-1].IntValue())
+	//TODO VADAM there is even a comment that 1 is the metadata
+	metadata := MetadataFromInt(proofd.DisclosedAttributes()[0].IntValue(), conf) // index 1 is metadata attribute
+	attr, str, err := parseAttribute(index.AttributeIndex-1, metadata, proofd.DisclosedAttributes()[index.AttributeIndex-1].IntValue())
 
 	if err != nil {
 		return nil, nil, err
@@ -121,13 +124,13 @@ func (pl ProofList) VerifyProofs(
 	configuration *Configuration,
 	request SessionRequest,
 	context *big.Int, nonce *big.Int,
-	publickeys []*gabikeys.PublicKey,
+	publickeys []gabikeys.PublicKey,
 	validAt *time.Time,
 	isSig bool,
 ) (bool, map[int]*time.Time, error) {
 
 	// Empty proof lists are allowed (if consistent with the session request, which is checked elsewhere)
-	if len(pl.CredentialDisclosures) == 0 {
+	if len(pl.proof.CredentialDisclosures()) == 0 {
 		return true, nil, nil
 	}
 
@@ -139,7 +142,7 @@ func (pl ProofList) VerifyProofs(
 		}
 	}
 
-	if len(pl.CredentialDisclosures) != len(publickeys) {
+	if len(pl.proof.CredentialDisclosures()) != len(publickeys) {
 		return false, nil, errors.New("Insufficient public keys to verify the proofs")
 	}
 
@@ -154,7 +157,7 @@ func (pl ProofList) VerifyProofs(
 	// 	}
 	// }
 
-	if !(*gabi.DisclosureProof)(&pl).Verify() {
+	if !pl.proof.Verify() {
 		return false, nil, nil
 	}
 
@@ -167,8 +170,8 @@ func (pl ProofList) VerifyProofs(
 	if request != nil {
 		//revParams = request.Base().Revocation
 	}
-	for _, proof := range pl.CredentialDisclosures {
-		typ := MetadataFromInt(proof.DisclosedAttributes[0].IntValue(), configuration).CredentialType()
+	for _, proof := range pl.proof.CredentialDisclosures() {
+		typ := MetadataFromInt(proof.DisclosedAttributes()[0].IntValue(), configuration).CredentialType()
 		if typ == nil {
 			return false, nil, errors.New("Received unknown credential type")
 		}
@@ -241,10 +244,10 @@ func (pl ProofList) VerifyProofs(
 }
 
 func (d *Disclosure) extraIndices(condiscon AttributeConDisCon) []*DisclosedAttributeIndex {
-	disclosed := make([]map[int]struct{}, len(d.Proofs.CredentialDisclosures))
-	for i, proofd := range d.Proofs.CredentialDisclosures {
+	disclosed := make([]map[int]struct{}, len(d.Proofs.CredentialDisclosures()))
+	for i, proofd := range d.Proofs.CredentialDisclosures() {
 		disclosed[i] = map[int]struct{}{}
-		for j := range proofd.DisclosedAttributes {
+		for j := range proofd.DisclosedAttributes() {
 			if j <= 1 {
 				continue
 			}
@@ -288,7 +291,7 @@ func (d *Disclosure) DisclosedAttributes(configuration *Configuration, condiscon
 	var extra []*DisclosedAttribute
 	indices := d.extraIndices(condiscon)
 	for _, index := range indices {
-		attr, _, err := extractAttribute((ProofList)(d.Proofs), index, configuration)
+		attr, _, err := extractAttribute(ProofList{d.Proofs}, index, configuration)
 		if err != nil {
 			return false, nil, err
 		}
@@ -341,12 +344,12 @@ func (d *Disclosure) VerifyAgainstRequest(
 	configuration *Configuration,
 	request SessionRequest,
 	context, nonce *big.Int,
-	publickeys []*gabikeys.PublicKey,
+	publickeys []gabikeys.PublicKey,
 	validAt *time.Time,
 	issig bool,
 ) ([][]*DisclosedAttribute, ProofStatus, error) {
 	// Cryptographically verify all included IRMA proofs
-	valid, revtimes, err := ProofList(d.Proofs).VerifyProofs(configuration, request, context, nonce, publickeys, validAt, issig)
+	valid, revtimes, err := ProofList{d.Proofs}.VerifyProofs(configuration, request, context, nonce, publickeys, validAt, issig)
 
 	if !valid || err != nil {
 		return nil, ProofStatusInvalid, err
@@ -387,7 +390,7 @@ func (d *Disclosure) Verify(configuration *Configuration, request *DisclosureReq
 func (sm *SignedMessage) Verify(configuration *Configuration, request *SignatureRequest) ([][]*DisclosedAttribute, ProofStatus, error) {
 	var message string
 
-	if len(sm.Signature.CredentialDisclosures) == 0 {
+	if len(sm.Signature.CredentialDisclosures()) == 0 {
 		return nil, ProofStatusInvalid, nil
 	}
 

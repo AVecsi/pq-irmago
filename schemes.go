@@ -1127,7 +1127,7 @@ func (scheme *SchemeManager) delete(conf *Configuration) error {
 			delete(conf.Issuers, iss)
 		}
 	}
-	conf.publicKeys.DeleteIf(func(id PublicKeyIdentifier, _ *gabikeys.PublicKey) bool {
+	conf.publicKeys.DeleteIf(func(id PublicKeyIdentifier, _ gabikeys.PublicKey) bool {
 		return id.Issuer.Root() == name
 	})
 	for cred := range conf.CredentialTypes {
@@ -1181,7 +1181,7 @@ func (scheme *SchemeManager) purge(conf *Configuration) {
 	for issuerid, issuer := range conf.Issuers {
 		if issuer.SchemeManagerIdentifier() == id {
 			delete(conf.Issuers, issuerid)
-			conf.publicKeys.DeleteIf(func(keyid PublicKeyIdentifier, _ *gabikeys.PublicKey) bool {
+			conf.publicKeys.DeleteIf(func(keyid PublicKeyIdentifier, _ gabikeys.PublicKey) bool {
 				return keyid.Issuer.SchemeManagerIdentifier() == id
 			})
 		}

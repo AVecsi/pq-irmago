@@ -106,7 +106,7 @@ func (s *storageOld) TxDeleteAllSignatures(tx *transaction) error {
 	return tx.DeleteBucket([]byte(signaturesBucket))
 }
 
-func (s *storageOld) TxStoreZkDilSignature(tx *transaction, credHash string, sig *zkDilSignatureWitness) error {
+func (s *storageOld) TxStoreZkDilSignature(tx *transaction, credHash string, sig *SignatureWitness) error {
 	// We take the SHA256 hash over all attributes as the bucket key for the signature.
 	// This means that of the signatures of two credentials that have identical attributes
 	// only one gets stored, one overwriting the other - but that doesn't
@@ -177,7 +177,7 @@ func (s *storageOld) TxStoreUpdates(tx *transaction, updates []update) error {
 	return s.txStore(tx, userdataBucket, updatesKey, updates)
 }
 
-func (s *storageOld) LoadSignature(attrs *irma.AttributeList) (*gabi.ZkDilSignature, error) {
+func (s *storageOld) LoadSignature(attrs *irma.AttributeList) (gabi.Signature, error) {
 	credType := attrs.CredentialType()
 	if credType == nil {
 		return nil, errors.New("credential not known in configuration")
@@ -186,14 +186,14 @@ func (s *storageOld) LoadSignature(attrs *irma.AttributeList) (*gabi.ZkDilSignat
 		return nil, errors.Errorf("scheme %s is disabled", credType.SchemeManagerIdentifier())
 	}
 
-	sig := new(zkDilSignatureWitness)
+	sig := new(SignatureWitness)
 	found, err := s.load(signaturesBucket, attrs.Hash(), sig)
 	if err != nil {
 		return nil, err
 	} else if !found {
 		return nil, errors.Errorf("signature of credential with hash %s cannot be found", attrs.Hash())
 	}
-	return sig.ZkDilSignature, nil
+	return sig.Signature, nil
 }
 
 // LoadSecretKey retrieves and returns the secret key from bbolt storageOld, or if no secret key
@@ -380,16 +380,16 @@ func (f *fileStorage) signatureFilename(attrs *irma.AttributeList) string {
 	return filepath.Join(signaturesDir, attrs.Hash())
 }
 
-func (f *fileStorage) LoadSignature(attrs *irma.AttributeList) (signature *gabi.ZkDilSignature, err error) {
+func (f *fileStorage) LoadSignature(attrs *irma.AttributeList) (signature gabi.Signature, err error) {
 	sigpath := f.signatureFilename(attrs)
 	if err := common.AssertPathExists(f.path(sigpath)); err != nil {
 		return nil, err
 	}
-	sig := &zkDilSignatureWitness{}
+	sig := &SignatureWitness{}
 	if err := f.load(sig, sigpath); err != nil {
 		return nil, err
 	}
-	return sig.ZkDilSignature, nil
+	return sig.Signature, nil
 }
 
 // LoadSecretKey retrieves and returns the secret key from file storage. When no secret key

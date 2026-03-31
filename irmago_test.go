@@ -792,7 +792,7 @@ var (
 	retrieve(t, pk, storage, 6)
 } */
 
-/* func revokeMultiple(t *testing.T, sk *gabikeys.PrivateKey, update *revocation.Update) *revocation.Update {
+/* func revokeMultiple(t *testing.T, sk gabikeys.PrivateKey, update *revocation.Update) *revocation.Update {
 	acc := update.SignedAccumulator.Accumulator
 	event := update.Events[len(update.Events)-1]
 	events := update.Events
@@ -805,7 +805,7 @@ var (
 	return update
 } */
 
-/* func retrieve(t *testing.T, pk *gabikeys.PublicKey, storage *RevocationStorage, expectedIndex uint64) {
+/* func retrieve(t *testing.T, pk gabikeys.PublicKey, storage *RevocationStorage, expectedIndex uint64) {
 	count := expectedIndex + 1
 	for i := uint64(0); i <= count; i++ {
 		// If limit is 0, then all events should be returned.
@@ -830,7 +830,7 @@ var (
 	}
 } */
 
-/* func revoke(t *testing.T, acc *revocation.Accumulator, parent *revocation.Event, sk *gabikeys.PrivateKey) (*revocation.Accumulator, *revocation.Event) {
+/* func revoke(t *testing.T, acc *revocation.Accumulator, parent *revocation.Event, sk gabikeys.PrivateKey) (*revocation.Accumulator, *revocation.Event) {
 	e, err := rand.Prime(rand.Reader, 100)
 	require.NoError(t, err)
 	acc, event, err := acc.Remove(sk, big.Convert(e), parent)
@@ -1570,7 +1570,7 @@ func TestParseKeysFolderConcurrency(t *testing.T) {
 
 	for j := 0; j < 1000; j++ {
 		// Clear map for next iteration
-		conf.publicKeys = concmap.New[PublicKeyIdentifier, *gabikeys.PublicKey]()
+		conf.publicKeys = concmap.New[PublicKeyIdentifier, gabikeys.PublicKey]()
 
 		for i := 0; i < 10; i++ {
 			grp.Add(1)

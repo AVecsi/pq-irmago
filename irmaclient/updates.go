@@ -5,7 +5,6 @@ import (
 	"time"
 
 	gabi "github.com/AVecsi/pq-gabi"
-	"github.com/AVecsi/pq-gabi/poseidon"
 	"go.etcd.io/bbolt"
 
 	irma "github.com/AVecsi/pq-irmago"
@@ -100,15 +99,15 @@ var clientUpdates = []func(client *Client) error{
 			return err
 		}
 
-		sigs := make(map[string]*zkDilSignatureWitness)
+		sigs := make(map[string]*SignatureWitness)
 		for _, attrlistlist := range attrs {
 			for _, attrlist := range attrlistlist {
 				sig, err := fileStorage.LoadSignature(attrlist)
 				if err != nil {
 					return err
 				}
-				sigs[attrlist.Hash()] = &zkDilSignatureWitness{
-					ZkDilSignature: sig,
+				sigs[attrlist.Hash()] = &SignatureWitness{
+					Signature: sig,
 				}
 			}
 		}
@@ -314,33 +313,21 @@ var clientUpdates = []func(client *Client) error{
 					var gabiAttributes []*gabi.Attribute
 
 					gabiAttributes = append(gabiAttributes, gabi.NewAttribute(client.secretkey.Key.Bytes()))
-					//TODO this should be a random nonce in practice
-					gabiAttributes = append(gabiAttributes, gabi.NewAttribute(client.secretkey.Key.Bytes()))
 
-					//TODO implement helper function in pq-gabi for this
+					hiddenHash, salt, err := gabi.HideAttributes(gabiAttributes)
+					if err != nil {
+						return err
+					}
+
 					for i := range attrlist.Ints {
 						gabiAttributes = append(gabiAttributes, gabi.NewAttribute(attrlist.Ints[i].Bytes()))
 					}
 
-					h := poseidon.NewPoseidon(nil, gabi.POS_RF, gabi.POS_T, gabi.POS_RATE, 7340033)
-					h.Write(gabiAttributes[0].Hash)
-					h.Write(gabiAttributes[1].Hash)
-					hiddenHashFes := h.Read(12)
+					combinedHash := gabi.CombineHiddenPublic(hiddenHash, gabiAttributes[1:])
 
-					h.Reset()
-					for i := 2; i < len(gabiAttributes); i += 1 {
-						h.Write(gabiAttributes[i].Hash)
-					}
+					gabiCred, err := gabi.NewCredential(e, gabiAttributes, len(gabiAttributes), 1, combinedHash, salt)
 
-					publicHashFes := h.Read(12)
-
-					h.Reset()
-					h.WriteInts(hiddenHashFes)
-					h.WriteInts(publicHashFes)
-
-					combinedHash := h.ReadUint32(12)
-
-					cred := &credential{attrs: attrlist, Credential: &gabi.Credential{Signature: e, Attributes: gabiAttributes, UserAttrCount: 2, CredHash: combinedHash}}
+					cred := &credential{attrs: attrlist, Credential: gabiCred}
 					err = client.storage.TxStoreSignature(tx, cred)
 					if err != nil {
 						return err

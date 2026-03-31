@@ -435,7 +435,7 @@ func (c AttributeCon) Satisfy(proofs gabi.DisclosureProof, indices []*DisclosedA
 
 	for j := range c {
 		index := indices[j]
-		attr, val, err := extractAttribute((ProofList)(proofs), index, conf)
+		attr, val, err := extractAttribute(ProofList{proofs}, index, conf)
 		if err != nil {
 			return false, nil, err
 		}

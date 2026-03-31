@@ -74,7 +74,7 @@ func verifyClientIsUnmarshaled(t *testing.T, client *Client) {
 	cred, err := client.credential(irma.NewCredentialTypeIdentifier("irma-demo.RU.studentCard"), 0)
 	require.NoError(t, err, "could not fetch credential")
 	require.NotNil(t, cred, "Credential should exist")
-	require.NotNil(t, cred.Attributes[0], "Metadata attribute of irma-demo.RU.studentCard should not be nil")
+	require.NotNil(t, cred.Attributes()[0], "Metadata attribute of irma-demo.RU.studentCard should not be nil")
 
 	cred, err = client.credential(irma.NewCredentialTypeIdentifier("test.test.mijnirma"), 0)
 	require.NoError(t, err, "could not fetch credential")
@@ -83,8 +83,10 @@ func verifyClientIsUnmarshaled(t *testing.T, client *Client) {
 	require.NotEmpty(t, client.CredentialInfoList())
 
 	require.NoError(t, err)
+	credVerification, err := cred.Signature().Verify(cred.CredHash())
+	require.NoError(t, err)
 	require.True(t,
-		cred.Signature.Verify(cred.CredHash),
+		credVerification,
 		"Credential should be valid",
 	)
 }
@@ -94,12 +96,13 @@ func verifyCredentials(t *testing.T, client *Client) {
 		for index, attrs := range credsmap {
 			cred, err := client.credential(attrs.CredentialType().Identifier(), index)
 			require.NoError(t, err)
+			credVerification, err := cred.Signature().Verify(cred.CredHash())
 			require.NoError(t, err)
 			require.True(t,
-				cred.Credential.Signature.Verify(cred.CredHash),
+				credVerification,
 				"Credential %s-%d was invalid", credtype.String(), index,
 			)
-			require.Equal(t, cred.Attributes[0], client.secretkey.Key,
+			require.Equal(t, cred.Attributes()[0], client.secretkey.Key,
 				"Secret key of credential %s-%d unequal to main secret key",
 				cred.CredentialType().Identifier().String(), index,
 			)

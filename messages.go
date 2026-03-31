@@ -534,9 +534,9 @@ func (status ServerStatus) Finished() bool {
 }
 
 type ServerSessionResponse struct {
-	ProofStatus     ProofStatus            `json:"proofStatus"`
-	IssueSignatures []*gabi.ZkDilSignature `json:"sigs,omitempty"`
-	NextSession     *Qr                    `json:"nextSession,omitempty"`
+	ProofStatus     ProofStatus      `json:"proofStatus"`
+	IssueSignatures []gabi.Signature `json:"sigs,omitempty"`
+	NextSession     *Qr              `json:"nextSession,omitempty"`
 
 	// needed for legacy (un)marshaling
 	ProtocolVersion *ProtocolVersion `json:"-"`

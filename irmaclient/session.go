@@ -326,7 +326,8 @@ func checkKey(conf *irma.Configuration, issuer irma.IssuerIdentifier, counter ui
 	if pk == nil {
 		return errors.Errorf("credential signed with unknown public key %s", id)
 	}
-	if time.Now().Unix() > pk.ExpiryDate {
+
+	if time.Now().Unix() > pk.GetExpiryDate() {
 		return errors.Errorf("credential signed with expired key %s", id)
 	}
 	return nil
@@ -555,7 +556,7 @@ func (session *session) sendResponse(message interface{}) {
 // getBuilders computes the builders for disclosure proofs or secretkey-knowledge proof (in case of disclosure/signing
 // and issuing respectively).
 func (session *session) getBuilders() (gabi.DisclosureProof, *big.Int, irma.DisclosedAttributeIndices, *big.Int, error) {
-	var builders *gabi.DisclosureProof
+	var builders gabi.DisclosureProof
 	var err error
 	var issuerProofNonce *big.Int
 	var choices irma.DisclosedAttributeIndices
@@ -568,7 +569,7 @@ func (session *session) getBuilders() (gabi.DisclosureProof, *big.Int, irma.Disc
 		userSecret, choices, err = session.client.IssuanceProofBuilders(session.request.(*irma.IssuanceRequest), session.choice)
 	}
 
-	return *builders, userSecret, choices, issuerProofNonce, err
+	return builders, userSecret, choices, issuerProofNonce, err
 }
 
 // getProofs computes the disclosure proofs or secretkey-knowledge proof (in case of disclosure/signing
