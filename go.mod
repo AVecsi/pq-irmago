@@ -3,7 +3,7 @@ module github.com/AVecsi/pq-irmago
 go 1.25.0
 
 require (
-	github.com/AVecsi/pq-gabi v0.0.0-20260331164749-a53f2860bf85
+	github.com/AVecsi/pq-gabi v0.0.0-20260331170815-3365ebd47d21
 	github.com/alexandrevicenzi/go-sse v1.6.0
 	github.com/alicebob/miniredis/v2 v2.33.0
 	github.com/bwesterb/go-atum v1.1.5

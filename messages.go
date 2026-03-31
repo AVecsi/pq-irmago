@@ -287,6 +287,28 @@ type Disclosure struct {
 	Indices DisclosedAttributeIndices `json:"indices"`
 }
 
+func (d *Disclosure) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Proofs  json.RawMessage           `json:"proofs"`
+		Indices DisclosedAttributeIndices `json:"indices"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	d.Indices = raw.Indices
+
+	if len(raw.Proofs) > 0 && string(raw.Proofs) != "null" {
+		proof, err := gabi.ParseDisclosureProof(raw.Proofs)
+		if err != nil {
+			return err
+		}
+		d.Proofs = proof
+	}
+
+	return nil
+}
+
 // DisclosedAttributeIndices contains, for each conjunction of an attribute disclosure request,
 // a list of attribute indices, pointing to where the disclosed attributes for that conjunction
 // can be found within a gabi.ProofList.
