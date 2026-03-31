@@ -312,7 +312,7 @@ var clientUpdates = []func(client *Client) error{
 
 					var gabiAttributes []*gabi.Attribute
 
-					gabiAttributes = append(gabiAttributes, gabi.NewAttribute(client.secretkey.Key.Bytes()))
+					gabiAttributes = append(gabiAttributes, gabi.NewAttribute(sk.Key.Bytes()))
 
 					hiddenHash, salt, err := gabi.HideAttributes(gabiAttributes)
 					if err != nil {
@@ -326,6 +326,9 @@ var clientUpdates = []func(client *Client) error{
 					combinedHash := gabi.CombineHiddenPublic(hiddenHash, gabiAttributes[1:])
 
 					gabiCred, err := gabi.NewCredential(e, gabiAttributes, len(gabiAttributes), 1, combinedHash, salt)
+					if err != nil {
+						return err
+					}
 
 					cred := &credential{attrs: attrlist, Credential: gabiCred}
 					err = client.storage.TxStoreSignature(tx, cred)

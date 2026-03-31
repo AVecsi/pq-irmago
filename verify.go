@@ -108,9 +108,9 @@ func extractAttribute(pl ProofList, index *DisclosedAttributeIndex, conf *Config
 	}
 	proofd := pl.proof.CredentialDisclosures()[index.CredentialIndex]
 
-	//TODO VADAM there is even a comment that 1 is the metadata
-	metadata := MetadataFromInt(proofd.DisclosedAttributes()[0].IntValue(), conf) // index 1 is metadata attribute
-	attr, str, err := parseAttribute(index.AttributeIndex-1, metadata, proofd.DisclosedAttributes()[index.AttributeIndex-1].IntValue())
+	//TODO VADAM1
+	metadata := MetadataFromInt(proofd.DisclosedAttributes()[1].IntValue(), conf) // index 1 is metadata attribute
+	attr, str, err := parseAttribute(index.AttributeIndex, metadata, proofd.DisclosedAttributes()[index.AttributeIndex].IntValue())
 
 	if err != nil {
 		return nil, nil, err
@@ -171,7 +171,7 @@ func (pl ProofList) VerifyProofs(
 		//revParams = request.Base().Revocation
 	}
 	for _, proof := range pl.proof.CredentialDisclosures() {
-		typ := MetadataFromInt(proof.DisclosedAttributes()[0].IntValue(), configuration).CredentialType()
+		typ := MetadataFromInt(proof.DisclosedAttributes()[1].IntValue(), configuration).CredentialType()
 		if typ == nil {
 			return false, nil, errors.New("Received unknown credential type")
 		}
@@ -254,7 +254,7 @@ func (d *Disclosure) extraIndices(condiscon AttributeConDisCon) []*DisclosedAttr
 		disclosed[i] = map[int]struct{}{}
 		for j := range proofd.DisclosedAttributes() {
 			if j <= 1 {
-				continue
+				continue // skip secret (0) and metadata (1)
 			}
 			disclosed[i][j] = struct{}{}
 		}

@@ -682,6 +682,7 @@ func (client *Client) addCredSuggestion(
 //     a nonrevocation proof is required).
 func (client *Client) satisfiesCon(request irma.SessionRequest, attrs *irma.AttributeList, con irma.AttributeCon) (bool, bool) {
 	var credfound bool
+	//TODO invalid memory address or nil pointer
 	credtype := attrs.CredentialType().Identifier()
 	for _, attr := range con {
 		if attr.Type.CredentialTypeIdentifier() != credtype {

@@ -383,7 +383,7 @@ func (s *storage) LoadAttributes() (list map[irma.CredentialTypeIdentifier][]*ir
 
 			// Initialize metadata attributes
 			for _, attrlist := range attrlistlist {
-				attrlist.MetadataAttribute = irma.MetadataFromInt(attrlist.Ints[2], s.Configuration)
+				attrlist.MetadataAttribute = irma.MetadataFromInt(attrlist.Ints[0], s.Configuration)
 			}
 
 			credType := attrlistlist[0].CredentialType()

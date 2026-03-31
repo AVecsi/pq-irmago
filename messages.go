@@ -301,6 +301,7 @@ type DisclosedAttributeIndex struct {
 
 type IssueCommitmentMessage struct {
 	UserSecret *big.Int
+	Proofs     gabi.DisclosureProof      `json:"proofs,omitempty"`
 	Indices    DisclosedAttributeIndices `json:"indices,omitempty"`
 }
 
@@ -477,6 +478,7 @@ func (e *SessionError) Stack() string {
 
 func (i *IssueCommitmentMessage) Disclosure() *Disclosure {
 	return &Disclosure{
+		Proofs:  i.Proofs,
 		Indices: i.Indices,
 	}
 }
