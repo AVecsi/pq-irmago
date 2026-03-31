@@ -1044,8 +1044,8 @@ func (client *Client) ConstructCredentials(msg []gabi.Signature, request *irma.I
 
 		attrInts := []*big.Int{}
 
-		//This already has the secret attribute
-		for _, attr := range gabicred.Attributes() {
+		//Skip the secret attribute
+		for _, attr := range gabicred.Attributes()[1:] {
 			attrInts = append(attrInts, attr.IntValue())
 		}
 

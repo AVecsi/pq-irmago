@@ -151,6 +151,21 @@ type SignatureWitness struct {
 	gabi.Signature
 }
 
+func (sw *SignatureWitness) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Signature json.RawMessage `json:"Signature"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	sig, err := gabi.ParseSignature(raw.Signature)
+	if err != nil {
+		return err
+	}
+	sw.Signature = sig
+	return nil
+}
+
 func (s *storage) StoreSignature(cred *credential) error {
 	return s.Transaction(func(tx *transaction) error {
 		return s.TxStoreSignature(tx, cred)
