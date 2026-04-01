@@ -8,7 +8,6 @@ import (
 	"time"
 
 	gabi "github.com/AVecsi/pq-gabi"
-	"github.com/AVecsi/pq-gabi/attribute"
 	"github.com/AVecsi/pq-gabi/gabikeys"
 	irma "github.com/AVecsi/pq-irmago"
 	"github.com/AVecsi/pq-irmago/internal/common"
@@ -202,14 +201,8 @@ func (session *sessionData) handlePostCommitments(commitments *irma.IssueCommitm
 		}
 		//rb := conf.IrmaConfiguration.CredentialTypes[cred.CredentialTypeID].RandomBlindAttributeIndices()
 
-		secretAttr := gabi.NewAttribute(commitments.UserSecret.Bytes())
-		hiddenAttrsHash, _, err := gabi.HideAttributes([]*attribute.Attribute{secretAttr})
-		if err != nil {
-			panic(err)
-		}
-
 		//TODO Adam here attrs doesnt include the secret, right?
-		sig, _, err := issuer.IssueSignature(hiddenAttrsHash, attrs)
+		sig, err := issuer.IssueSignature(commitments.HiddenAttrsHash, attrs)
 
 		if err != nil {
 			return nil, session.fail(server.ErrorIssuanceFailed, err.Error(), conf)

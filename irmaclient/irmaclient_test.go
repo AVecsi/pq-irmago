@@ -83,7 +83,7 @@ func verifyClientIsUnmarshaled(t *testing.T, client *Client) {
 	require.NotEmpty(t, client.CredentialInfoList())
 
 	require.NoError(t, err)
-	credVerification, err := cred.Signature().Verify(cred.CredHash())
+	credVerification, err := cred.Signature().Verify()
 	require.NoError(t, err)
 	require.True(t,
 		credVerification,
@@ -96,7 +96,7 @@ func verifyCredentials(t *testing.T, client *Client) {
 		for index, attrs := range credsmap {
 			cred, err := client.credential(attrs.CredentialType().Identifier(), index)
 			require.NoError(t, err)
-			credVerification, err := cred.Signature().Verify(cred.CredHash())
+			credVerification, err := cred.Signature().Verify()
 			require.NoError(t, err)
 			require.True(t,
 				credVerification,

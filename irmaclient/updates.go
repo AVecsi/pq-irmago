@@ -314,7 +314,7 @@ var clientUpdates = []func(client *Client) error{
 
 					gabiAttributes = append(gabiAttributes, gabi.NewAttribute(sk.Key.Bytes()))
 
-					hiddenHash, salt, err := gabi.HideAttributes(gabiAttributes)
+					_, salt, err := gabi.HideAttributes(gabiAttributes)
 					if err != nil {
 						return err
 					}
@@ -323,9 +323,7 @@ var clientUpdates = []func(client *Client) error{
 						gabiAttributes = append(gabiAttributes, gabi.NewAttribute(attrlist.Ints[i].Bytes()))
 					}
 
-					combinedHash := gabi.CombineHiddenPublic(hiddenHash, gabiAttributes[1:])
-
-					gabiCred, err := gabi.NewCredential(e, gabiAttributes, len(gabiAttributes), 1, combinedHash, salt)
+					gabiCred, err := gabi.NewCredential(e, gabiAttributes, len(gabiAttributes), 1, salt)
 					if err != nil {
 						return err
 					}

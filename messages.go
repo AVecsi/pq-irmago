@@ -322,9 +322,9 @@ type DisclosedAttributeIndex struct {
 }
 
 type IssueCommitmentMessage struct {
-	UserSecret *big.Int
-	Proofs     gabi.DisclosureProof      `json:"proofs,omitempty"`
-	Indices    DisclosedAttributeIndices `json:"indices,omitempty"`
+	HiddenAttrsHash []uint32                  `json:"hiddenAttrsHash"`
+	Proofs          gabi.DisclosureProof      `json:"proofs,omitempty"`
+	Indices         DisclosedAttributeIndices `json:"indices,omitempty"`
 }
 
 //

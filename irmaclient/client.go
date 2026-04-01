@@ -45,6 +45,7 @@ import (
 type Client struct {
 	// Stuff we manage on disk
 	secretkey        *secretKey
+	issuanceSalt     []byte
 	attributes       map[irma.CredentialTypeIdentifier][]*irma.AttributeList
 	credentialsCache concmap.ConcMap[credLookup, *credential]
 	updates          []update
@@ -564,18 +565,11 @@ func (client *Client) credential(id irma.CredentialTypeIdentifier, counter int) 
 
 	gabiAttributes = append(gabiAttributes, gabi.NewAttribute(client.secretkey.Key.Bytes()))
 
-	hiddenHash, salt, err := gabi.HideAttributes(gabiAttributes)
-	if err != nil {
-		return nil, err
-	}
-
 	for i := range attrs.Ints {
 		gabiAttributes = append(gabiAttributes, gabi.NewAttribute(attrs.Ints[i].Bytes()))
 	}
 
-	combinedHash := gabi.CombineHiddenPublic(hiddenHash, gabiAttributes[1:])
-
-	gabiCred, err := gabi.NewCredential(sig, gabiAttributes, len(gabiAttributes), 1, combinedHash, salt)
+	gabiCred, err := gabi.NewCredential(sig, gabiAttributes, len(gabiAttributes), 1, client.issuanceSalt)
 	if err != nil {
 		return nil, err
 	}
@@ -991,9 +985,20 @@ func (client *Client) IssueCommitments(request *irma.IssuanceRequest, choice *ir
 	if err != nil {
 		return nil, err
 	}
+
+	secretAttr := gabi.NewAttribute(secretkey.Bytes())
+
+	hiddenAttrsHash, salt, err := gabi.HideAttributes([]*attribute.Attribute{secretAttr})
+	if err != nil {
+		return nil, err
+	}
+
+	// store salt for later proof generation
+	client.issuanceSalt = salt
+
 	return &irma.IssueCommitmentMessage{
-		UserSecret: secretkey,
-		Indices:    choices,
+		HiddenAttrsHash: hiddenAttrsHash,
+		Indices:         choices,
 	}, nil
 }
 
@@ -1021,18 +1026,11 @@ func (client *Client) ConstructCredentials(msg []gabi.Signature, request *irma.I
 
 		gabiAttributes = append(gabiAttributes, gabi.NewAttribute(client.secretkey.Key.Bytes()))
 
-		hiddenHash, salt, err := gabi.HideAttributes(gabiAttributes)
-		if err != nil {
-			return err
-		}
-
 		for i := range attrs.Ints {
 			gabiAttributes = append(gabiAttributes, gabi.NewAttribute(attrs.Ints[i].Bytes()))
 		}
 
-		combinedHash := gabi.CombineHiddenPublic(hiddenHash, gabiAttributes[1:])
-
-		cred, err := gabi.NewCredential(sig, gabiAttributes, len(gabiAttributes), 1, combinedHash, salt)
+		cred, err := gabi.NewCredential(sig, gabiAttributes, len(gabiAttributes), 1, client.issuanceSalt)
 		if err != nil {
 			return err
 		}

@@ -58,7 +58,7 @@ func (pl ProofList) ExtractPublicKeys(configuration *Configuration) ([]gabikeys.
 
 	for _, v := range pl.proof.CredentialDisclosures() {
 		common.Logger.Debug("verifying proofs deeper2.0.1\n", v, "\n\n\n")
-		//metadata := MetadataFromInt(v.DisclosedAttributes[1].IntValue(), configuration) // index 1 is metadata attribute
+		//metadata := MetadataFromInt(v.DisclosedAttributes()[1].IntValue(), configuration) // index 1 is metadata attribute
 		//TODO well, for the PoC it will work but its not as intended
 		seed := make([]byte, 32)
 		_, publicKey, err := gabi.GenerateKeyPair(seed, 0, time.Now().AddDate(1, 0, 0))
