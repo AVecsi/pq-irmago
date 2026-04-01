@@ -425,6 +425,7 @@ func (session *session) requestPermission() {
 // asks for the pin and performs the keyshare session, and finishes the session by either POSTing the result to the
 // API server or returning it to the caller (in case of interactive and noninteractive sessions, respectively).
 func (session *session) doSession(proceed bool, choice *irma.DisclosureChoice) {
+	fmt.Printf("🔍 ACTION: %s\n", session.Action)
 	defer session.recoverFromPanic()
 
 	session.pendingPermissionRequest = false
@@ -474,6 +475,9 @@ func (session *session) doSession(proceed bool, choice *irma.DisclosureChoice) {
 // sendResponse sends the proofs of knowledge of the hidden attributes and/or the secret key, or the constructed
 // attribute-based signature, to the API server.
 func (session *session) sendResponse(message interface{}) {
+	bts, _ := json.Marshal(message)
+	fmt.Printf("🔑 CLIENT sendResponse: %s\n", string(bts[:min(len(bts), 200)]))
+
 	var log *LogEntry
 	var err error
 	var messageJson []byte
@@ -575,6 +579,7 @@ func (session *session) getBuilders() (gabi.DisclosureProof, *big.Int, irma.Disc
 // getProofs computes the disclosure proofs or secretkey-knowledge proof (in case of disclosure/signing
 // and issuing respectively) to be sent to the server.
 func (session *session) getProof() (interface{}, error) {
+	fmt.Printf("🔍 ACTION: %s\n", session.Action)
 	var message interface{}
 	var err error
 

@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"time"
 
@@ -122,6 +123,7 @@ func (s *storage) txLoad(tx *transaction, bucketName string, key string, dest in
 		return false, err
 	}
 
+	fmt.Printf("🔍 txLoad bucket=%s key=%s plaintext len=%d first100=%s\n", bucketName, key, len(plaintext), string(plaintext[:min(len(plaintext), 100)]))
 	return true, json.Unmarshal(plaintext, dest)
 }
 
@@ -346,6 +348,7 @@ func (s *storage) LoadSignature(attrs *irma.AttributeList) (gabi.Signature, erro
 
 	sig := new(SignatureWitness)
 	found, err := s.load(signaturesBucket, attrs.Hash(), sig)
+	fmt.Printf("🔍 LoadSignature found=%v err=%v sig.Signature==nil: %v\n", found, err, sig.Signature == nil)
 	if err != nil {
 		return nil, err
 	} else if !found {
@@ -359,6 +362,7 @@ func (s *storage) LoadSignature(attrs *irma.AttributeList) (gabi.Signature, erro
 func (s *storage) LoadSecretKey() (*secretKey, error) {
 	sk := &secretKey{}
 	found, err := s.load(userdataBucket, skKey, sk)
+	fmt.Printf("🔍 LoadSecretKey found=%v err=%v\n", found, err)
 	if err != nil {
 		return nil, err
 	}

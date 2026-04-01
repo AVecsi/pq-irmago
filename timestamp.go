@@ -108,7 +108,7 @@ func (sm *SignedMessage) VerifyTimestamp(message string, conf *Configuration) er
 	disclosed := make([][]*big.Int, size)
 	for i, proofd := range sm.Signature.CredentialDisclosures() {
 		sigs[i] = new(big.Int).SetBytes(proofd.SignatureProof().ProofBytes())
-		ct := MetadataFromInt(proofd.DisclosedAttributes()[1].IntValue(), conf).CredentialType()
+		ct := MetadataFromInt(proofd.DisclosedAttributes()[0].IntValue(), conf).CredentialType()
 		if ct == nil {
 			return errors.New("Cannot verify timestamp: signature contains attributes from unknown credential type")
 		}

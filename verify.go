@@ -2,6 +2,7 @@ package irma
 
 import (
 	"crypto/rsa"
+	"fmt"
 	"slices"
 	"time"
 
@@ -84,7 +85,7 @@ func (pl ProofList) Expired(configuration *Configuration, t *time.Time, skipExpi
 	}
 	for _, proof := range pl.proof.CredentialDisclosures() {
 
-		metadata := MetadataFromInt(proof.DisclosedAttributes()[1].IntValue(), configuration) // index 1 is metadata attribute
+		metadata := MetadataFromInt(proof.DisclosedAttributes()[0].IntValue(), configuration) // index 1 is metadata attribute
 
 		skipCheck := slices.Contains(skipExpiryCheck, metadata.CredentialType().Identifier())
 		if !skipCheck && metadata.Expiry().Before(*t) {
@@ -107,10 +108,15 @@ func extractAttribute(pl ProofList, index *DisclosedAttributeIndex, conf *Config
 		return nil, nil, errors.New("Credential index out of range")
 	}
 	proofd := pl.proof.CredentialDisclosures()[index.CredentialIndex]
+	fmt.Printf("🔍 extractAttribute credIndex=%d attrIndex=%d attrCredIndex=%d disclosedLen=%d\n",
+		index.CredentialIndex, index.AttributeIndex, index.AttributeCredIndex, len(proofd.DisclosedAttributes()))
 
-	//TODO VADAM1
-	metadata := MetadataFromInt(proofd.DisclosedAttributes()[1].IntValue(), conf) // index 1 is metadata attribute
-	attr, str, err := parseAttribute(index.AttributeIndex, metadata, proofd.DisclosedAttributes()[index.AttributeIndex].IntValue())
+	disclosed := proofd.DisclosedAttributes()
+
+	// [0] is always metadata
+	metadata := MetadataFromInt(disclosed[0].IntValue(), conf)
+
+	attr, str, err := parseAttribute(index.AttributeCredIndex, metadata, disclosed[index.AttributeIndex].IntValue())
 
 	if err != nil {
 		return nil, nil, err
@@ -158,8 +164,10 @@ func (pl ProofList) VerifyProofs(
 	// }
 
 	if !pl.proof.Verify() {
+		fmt.Println("SERVER proof verification FAILED")
 		return false, nil, nil
 	}
+	fmt.Println("SERVER proof verification SUCCEEDED")
 
 	// Perform per-proof verifications for each proof:
 	// - verify that any singleton credential occurs at most once in the prooflist
@@ -171,7 +179,11 @@ func (pl ProofList) VerifyProofs(
 		//revParams = request.Base().Revocation
 	}
 	for _, proof := range pl.proof.CredentialDisclosures() {
-		typ := MetadataFromInt(proof.DisclosedAttributes()[1].IntValue(), configuration).CredentialType()
+		fmt.Printf("🔍 SERVER DisclosedAttributes len: %d\n", len(proof.DisclosedAttributes()))
+		for i, attr := range proof.DisclosedAttributes() {
+			fmt.Printf("🔍 SERVER attr[%d] IntValue: %v\n", i, attr.IntValue())
+		}
+		typ := MetadataFromInt(proof.DisclosedAttributes()[0].IntValue(), configuration).CredentialType()
 		if typ == nil {
 			return false, nil, errors.New("Received unknown credential type")
 		}
@@ -265,14 +277,15 @@ func (d *Disclosure) extraIndices(condiscon AttributeConDisCon) []*DisclosedAttr
 			continue
 		}
 		for _, index := range set {
-			delete(disclosed[index.CredentialIndex], index.AttributeIndex)
+			delete(disclosed[index.CredentialIndex], index.AttributeCredIndex)
 		}
 	}
 
 	var extra []*DisclosedAttributeIndex
 	for i, attrs := range disclosed {
 		for j := range attrs {
-			extra = append(extra, &DisclosedAttributeIndex{CredentialIndex: i, AttributeIndex: j})
+			//TODO VADAM ?????
+			extra = append(extra, &DisclosedAttributeIndex{CredentialIndex: i, AttributeIndex: j, AttributeCredIndex: j})
 		}
 	}
 
@@ -288,8 +301,15 @@ func (d *Disclosure) DisclosedAttributes(configuration *Configuration, condiscon
 	if revtimes == nil {
 		revtimes = map[int]*time.Time{}
 	}
+	fmt.Println("SERVER DISCLOSED INDICES ", d.Indices)
+	if len(d.Indices) == 2 {
+		fmt.Printf("🔍 d.Indices[0][0]: credIdx=%d attrIdx=%d\n", d.Indices[0][0].CredentialIndex, d.Indices[0][0].AttributeCredIndex)
+		fmt.Printf("🔍 d.Indices[1][0]: credIdx=%d attrIdx=%d\n", d.Indices[1][0].CredentialIndex, d.Indices[1][0].AttributeCredIndex)
+	}
+
 	complete, list, err := condiscon.Satisfy(d, revtimes, configuration)
 	if err != nil {
+		fmt.Println("SERVER CONDISCON NOT SATISFIED")
 		return false, nil, err
 	}
 
@@ -297,6 +317,7 @@ func (d *Disclosure) DisclosedAttributes(configuration *Configuration, condiscon
 	indices := d.extraIndices(condiscon)
 	for _, index := range indices {
 		attr, _, err := extractAttribute(ProofList{d.Proofs}, index, configuration)
+		fmt.Println("SERVER EXTRACTED ATTR ", attr)
 		if err != nil {
 			return false, nil, err
 		}
@@ -324,8 +345,8 @@ func parseAttribute(index int, metadata *MetadataAttribute, attr *big.Int) (*Dis
 		p := "present"
 		attrval = &p
 	} else {
-		attrid = credtype.AttributeTypes[index-1].GetAttributeTypeIdentifier()
-		if credtype.AttributeTypes[index-1].RandomBlind {
+		attrid = credtype.AttributeTypes[index-2].GetAttributeTypeIdentifier()
+		if credtype.AttributeTypes[index-2].RandomBlind {
 			attrval = decodeRandomBlind(attr)
 		} else {
 			attrval = decodeAttribute(attr, metadata.Version())

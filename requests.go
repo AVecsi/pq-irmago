@@ -436,10 +436,16 @@ func (c AttributeCon) Satisfy(proofs gabi.DisclosureProof, indices []*DisclosedA
 	for j := range c {
 		index := indices[j]
 		attr, val, err := extractAttribute(ProofList{proofs}, index, conf)
+		fmt.Println("SERVER REQ EXTRACTED ATTR ", j+1, "  ", attr.Value)
 		if err != nil {
+			fmt.Println("SERVER CONDISCON NOT SATISFIED4")
 			return false, nil, err
 		}
 		if !c[j].Satisfy(attr.Identifier, val) {
+			fmt.Println("SERVER CONDISCON NOT SATISFIED5 ", attr.Identifier, "\n ", val)
+			fmt.Println(c[j].Type == attr.Identifier)
+			fmt.Println(c[j])
+			fmt.Println(c[j].Value)
 			return false, nil, nil
 		}
 		attrs = append(attrs, attr)
@@ -505,11 +511,13 @@ func (cdc AttributeConDisCon) Satisfy(disclosure *Disclosure, revocation map[int
 	for i, discon := range cdc {
 		satisfied, attrs, err := discon.Satisfy(disclosure.Proofs, disclosure.Indices[i], revocation, conf)
 		if err != nil {
+			fmt.Println("SERVER CONDISCON NOT SATISFIED3")
 			return false, nil, err
 		}
 		if satisfied {
 			list[i] = attrs
 		} else {
+			fmt.Println("SERVER CONDISCON NOT SATISFIED2")
 			complete = false
 			list[i] = nil
 		}

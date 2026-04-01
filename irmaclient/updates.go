@@ -314,16 +314,11 @@ var clientUpdates = []func(client *Client) error{
 
 					gabiAttributes = append(gabiAttributes, gabi.NewAttribute(sk.Key.Bytes()))
 
-					_, salt, err := gabi.HideAttributes(gabiAttributes)
-					if err != nil {
-						return err
-					}
-
 					for i := range attrlist.Ints {
 						gabiAttributes = append(gabiAttributes, gabi.NewAttribute(attrlist.Ints[i].Bytes()))
 					}
 
-					gabiCred, err := gabi.NewCredential(e, gabiAttributes, len(gabiAttributes), 1, salt)
+					gabiCred, err := gabi.NewCredential(e, gabiAttributes, len(gabiAttributes), 1)
 					if err != nil {
 						return err
 					}

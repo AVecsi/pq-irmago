@@ -316,9 +316,10 @@ type DisclosedAttributeIndices [][]*DisclosedAttributeIndex
 
 // DisclosedAttributeIndex points to a specific attribute in a gabi.ProofList.
 type DisclosedAttributeIndex struct {
-	CredentialIndex int                  `json:"cred"`
-	AttributeIndex  int                  `json:"attr"`
-	Identifier      CredentialIdentifier `json:"-"` // credential from which this attribute was disclosed
+	CredentialIndex    int                  `json:"cred"`
+	AttributeIndex     int                  `json:"attr"`
+	AttributeCredIndex int                  `json:"attrCred"`
+	Identifier         CredentialIdentifier `json:"-"` // credential from which this attribute was disclosed
 }
 
 type IssueCommitmentMessage struct {

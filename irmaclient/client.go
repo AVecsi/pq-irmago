@@ -2,6 +2,7 @@ package irmaclient
 
 import (
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"slices"
 	"sync"
@@ -545,7 +546,9 @@ func (client *Client) credential(id irma.CredentialTypeIdentifier, counter int) 
 		return
 	}
 
+	fmt.Printf("🔍 credential() id=%s counter=%d\n", id, counter)
 	sig, err := client.storage.LoadSignature(attrs)
+	fmt.Printf("🔍 LoadSignature err=%v sig==nil: %v\n", err, sig == nil)
 	if err != nil {
 		return nil, err
 	}
@@ -569,7 +572,7 @@ func (client *Client) credential(id irma.CredentialTypeIdentifier, counter int) 
 		gabiAttributes = append(gabiAttributes, gabi.NewAttribute(attrs.Ints[i].Bytes()))
 	}
 
-	gabiCred, err := gabi.NewCredential(sig, gabiAttributes, len(gabiAttributes), 1, client.issuanceSalt)
+	gabiCred, err := gabi.NewCredential(sig, gabiAttributes, len(gabiAttributes), 1)
 	if err != nil {
 		return nil, err
 	}
@@ -849,6 +852,7 @@ func (client *Client) groupCredentials(choice *irma.DisclosureChoice) (
 	credIndices := make(map[irma.CredentialIdentifier]int)
 	todisclose := make([]attributeGroup, 0, len(choice.Attributes))
 	attributeIndices := make(irma.DisclosedAttributeIndices, len(choice.Attributes))
+	index := 1
 	for i, attributeset := range choice.Attributes {
 		attributeIndices[i] = []*irma.DisclosedAttributeIndex{}
 		for _, attribute := range attributeset {
@@ -866,7 +870,8 @@ func (client *Client) groupCredentials(choice *irma.DisclosureChoice) (
 
 			identifier := attribute.Type
 			if identifier.IsCredential() {
-				attributeIndices[i] = append(attributeIndices[i], &irma.DisclosedAttributeIndex{CredentialIndex: credIndex, AttributeIndex: 1, Identifier: ici})
+				attributeIndices[i] = append(attributeIndices[i], &irma.DisclosedAttributeIndex{CredentialIndex: credIndex, AttributeIndex: 0, AttributeCredIndex: 1, Identifier: ici})
+				index++
 				continue // In this case we only disclose the metadata attribute, which is already handled above
 			}
 
@@ -876,8 +881,10 @@ func (client *Client) groupCredentials(choice *irma.DisclosureChoice) (
 			}
 			// These attribute indices will be used in the []*big.Int at gabi.credential.Attributes,
 			// which doesn't know about the secret key and metadata attribute, so +2
-			attributeIndices[i] = append(attributeIndices[i], &irma.DisclosedAttributeIndex{CredentialIndex: credIndex, AttributeIndex: attrIndex + 2, Identifier: ici})
+			attributeIndices[i] = append(attributeIndices[i], &irma.DisclosedAttributeIndex{CredentialIndex: credIndex, AttributeIndex: index, AttributeCredIndex: attrIndex + 2, Identifier: ici})
 			todisclose[credIndex].attrs = append(todisclose[credIndex].attrs, attrIndex+2)
+			fmt.Printf("🔍 groupCredentials attrIndex=%d final=%d\n", attrIndex, attrIndex+2)
+			index++
 		}
 	}
 
@@ -896,8 +903,11 @@ func (client *Client) ProofBuilders(choice *irma.DisclosureChoice, request irma.
 	var credDisclosures []gabi.CredentialDisclosure
 	//var credDisclosure *gabi.CredentialDisclosure
 	var creds []gabi.Credential
+	fmt.Printf("🔍 ProofBuilders todisclose=%d\n", len(todisclose))
 	for _, grp := range todisclose {
 		cred, err := client.credentialByID(grp.cred)
+		fmt.Printf("🔍 credentialByID err=%v cred==nil: %v\n", err, cred == nil)
+		fmt.Printf("🔍 ProofBuilders grp.attrs: %v\n", grp.attrs)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -1010,6 +1020,7 @@ func (client *Client) ConstructCredentials(msg []gabi.Signature, request *irma.I
 	// we save none of them to fail the session cleanly
 	gabicreds := []gabi.Credential{}
 	for i, sig := range msg {
+		sig.SetIssuanceSalt(client.issuanceSalt)
 
 		issuedAt := time.Now()
 		req := request.Credentials[i]
@@ -1030,7 +1041,7 @@ func (client *Client) ConstructCredentials(msg []gabi.Signature, request *irma.I
 			gabiAttributes = append(gabiAttributes, gabi.NewAttribute(attrs.Ints[i].Bytes()))
 		}
 
-		cred, err := gabi.NewCredential(sig, gabiAttributes, len(gabiAttributes), 1, client.issuanceSalt)
+		cred, err := gabi.NewCredential(sig, gabiAttributes, len(gabiAttributes), 1)
 		if err != nil {
 			return err
 		}
@@ -1044,10 +1055,12 @@ func (client *Client) ConstructCredentials(msg []gabi.Signature, request *irma.I
 
 		//Skip the secret attribute
 		for _, attr := range gabicred.Attributes()[1:] {
+			fmt.Printf("🔍 attr IntValue: %v\n", attr.IntValue())
 			attrInts = append(attrInts, attr.IntValue())
 		}
 
 		attrs := irma.NewAttributeListFromInts(attrInts, client.Configuration)
+		fmt.Printf("🔍 attrs.CredentialType: %v\n", attrs.CredentialType())
 
 		newcred, err := newCredential(gabicred, attrs, client.Configuration)
 		if err != nil {
