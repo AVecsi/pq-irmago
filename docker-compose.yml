@@ -116,6 +116,28 @@ services:
     networks:
       - irma-net
 
+  # Service to run the irma verification server with the yivi frontend
+  irmaserver:
+    build:
+      context: .
+      dockerfile: Dockerfile.verify
+    # Add a verify profile to prevent this service from starting by default.
+    profiles:
+      - verify
+    ports:
+      - 8088:8088
+    expose:
+      - 8088
+    networks:
+      - irma-net
+    entrypoint:
+      - "/bin/irma"
+      - "server"
+      - "-v"
+      - "--static-path=/frontend/examples/browser/yivi-frontend"
+      - "-u"
+      - "http://${IP}:8088"
+
 # Docker Desktop for MacOS does not support exposing ports when using host networking. Therefore,
 # we have to use bridge networking and expose the ports manually.
 # https://github.com/docker/for-mac/issues/1031
