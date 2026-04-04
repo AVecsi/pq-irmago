@@ -3,7 +3,7 @@ FROM golang:1 as build
 # Set build environment
 ENV CGO_ENABLED=1
 
-RUN apk add --no-cache gcc musl-dev curl git make
+RUN apt-get update && apt-get install -y gcc musl-dev curl git make
 
 # Install Rust
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
