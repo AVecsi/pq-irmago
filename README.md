@@ -24,6 +24,35 @@ For example, to start a simple IRMA session:
     IP=192.168.1.2 # Replace with your local IP address.
     docker-compose run -p 48680:48680 irma session --disclose pbdf.sidn-pbdf.email.email --url "http://$IP:48680"
 
+## Running the verification server
+
+The verification server serves a frontend that allows users to verify their IRMA credentials by scanning a QR code with the Yivi app. It is built using `Dockerfile.verify` and run via the `verify` Docker Compose profile.
+
+### Prerequisites
+
+Create a `.env` file in the root of the repository (or export the variables in your shell):
+
+    IP=192.168.1.2  # Replace with your local IP address
+
+### Building and running
+
+Build and start the verification server:
+
+    IP=192.168.1.2 docker-compose --profile verify up irmaserver --build
+
+The server will be available at `http://<IP>:8088`. Open this URL in a browser to see the verification frontend.
+
+To force a full rebuild without using the Docker cache (e.g. after updating dependencies):
+
+    IP=192.168.1.2 docker-compose --profile verify build --no-cache irmaserver
+    IP=192.168.1.2 docker-compose --profile verify up irmaserver
+
+### Notes
+
+- The frontend is automatically cloned from the [yivi-frontend-packages](https://github.com/AVecsi/yivi-frontend-packages) repository during the Docker build, so no manual setup is required.
+- TLS is disabled by default. This is fine for local development but should not be used in production.
+- Authentication of incoming session requests is disabled (`--no-auth`), meaning anyone who can reach the server can use it. Do not expose this server publicly.
+
 ## Running the unit tests
 
 > ⚠️ Tests will fail due to outdated test data.

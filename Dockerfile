@@ -1,4 +1,4 @@
-FROM golang:1-alpine as build
+FROM golang:1 as build
 
 # Set build environment
 ENV CGO_ENABLED=1
@@ -19,10 +19,10 @@ RUN go mod download && \
     chmod -R u+w . && \
     make build
 
-RUN go build -a -ldflags '-extldflags "-static"' -o "/bin/irma" ./irma
+RUN go build -a -ldflags '-extldflags "-static -lm"' -o "/bin/irma" ./irma
 
 # Create application user
-RUN adduser -D -u 1000 -g irma irma
+RUN useradd -u 1000 -ms /bin/bash irma
 
 # Start building the final image
 FROM scratch
