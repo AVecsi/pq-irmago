@@ -202,7 +202,7 @@ func (session *sessionData) handlePostCommitments(commitments *irma.IssueCommitm
 		//rb := conf.IrmaConfiguration.CredentialTypes[cred.CredentialTypeID].RandomBlindAttributeIndices()
 
 		//TODO Adam here attrs doesnt include the secret, right?
-		sig, err := issuer.IssueSignature(commitments.HiddenAttrsHash, attrs)
+		sig, err := issuer.IssueSignature(commitments.Commitment, attrs)
 
 		if err != nil {
 			return nil, session.fail(server.ErrorIssuanceFailed, err.Error(), conf)

@@ -46,7 +46,7 @@ import (
 type Client struct {
 	// Stuff we manage on disk
 	secretkey        *secretKey
-	issuanceSalt     []byte
+	issuanceOpening  []byte
 	attributes       map[irma.CredentialTypeIdentifier][]*irma.AttributeList
 	credentialsCache concmap.ConcMap[credLookup, *credential]
 	updates          []update
@@ -572,7 +572,8 @@ func (client *Client) credential(id irma.CredentialTypeIdentifier, counter int) 
 		gabiAttributes = append(gabiAttributes, gabi.NewAttribute(attrs.Ints[i].Bytes()))
 	}
 
-	gabiCred, err := gabi.NewCredential(sig, gabiAttributes, len(gabiAttributes), 1)
+	// reload path: the opening is already carried by the stored signature
+	gabiCred, err := gabi.NewCredential(sig, gabiAttributes, len(gabiAttributes), 1, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -998,17 +999,17 @@ func (client *Client) IssueCommitments(request *irma.IssuanceRequest, choice *ir
 
 	secretAttr := gabi.NewAttribute(secretkey.Bytes())
 
-	hiddenAttrsHash, salt, err := gabi.HideAttributes([]*attribute.Attribute{secretAttr})
+	commitment, opening, err := gabi.Commit([]*attribute.Attribute{secretAttr})
 	if err != nil {
 		return nil, err
 	}
 
-	// store salt for later proof generation
-	client.issuanceSalt = salt
+	// store opening for later credential construction / proof generation
+	client.issuanceOpening = opening
 
 	return &irma.IssueCommitmentMessage{
-		HiddenAttrsHash: hiddenAttrsHash,
-		Indices:         choices,
+		Commitment: commitment,
+		Indices:    choices,
 	}, nil
 }
 
@@ -1020,8 +1021,6 @@ func (client *Client) ConstructCredentials(msg []gabi.Signature, request *irma.I
 	// we save none of them to fail the session cleanly
 	gabicreds := []gabi.Credential{}
 	for i, sig := range msg {
-		sig.SetIssuanceSalt(client.issuanceSalt)
-
 		issuedAt := time.Now()
 		req := request.Credentials[i]
 		attrs, err := req.AttributeList(
@@ -1041,7 +1040,7 @@ func (client *Client) ConstructCredentials(msg []gabi.Signature, request *irma.I
 			gabiAttributes = append(gabiAttributes, gabi.NewAttribute(attrs.Ints[i].Bytes()))
 		}
 
-		cred, err := gabi.NewCredential(sig, gabiAttributes, len(gabiAttributes), 1)
+		cred, err := gabi.NewCredential(sig, gabiAttributes, len(gabiAttributes), 1, client.issuanceOpening)
 		if err != nil {
 			return err
 		}
