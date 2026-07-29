@@ -3,7 +3,7 @@ module github.com/AVecsi/pq-irmago
 go 1.25.0
 
 require (
-	github.com/AVecsi/pq-gabi v0.0.0-20260624122128-a35a053f5163
+	github.com/AVecsi/pq-gabi v0.0.0-20260729101610-4ff2a01573ac
 	github.com/alexandrevicenzi/go-sse v1.6.0
 	github.com/alicebob/miniredis/v2 v2.33.0
 	github.com/bwesterb/go-atum v1.1.5
@@ -27,10 +27,11 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	go.etcd.io/bbolt v1.5.0
-	gorm.io/gorm v1.31.1
+	gorm.io/gorm v1.31.2
 )
 
 require (
+	github.com/AVecsi/lazer v0.0.0-20260729101002-e8192d524694 // indirect
 	github.com/alicebob/gopher-json v0.0.0-20200520072559-a9ecdc9d1d3a // indirect
 	github.com/bwesterb/byteswriter v1.0.0 // indirect
 	github.com/bwesterb/go-pow v1.0.0 // indirect
@@ -50,7 +51,7 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
-	github.com/mattn/go-isatty v0.0.22 // indirect
+	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/nightlyone/lockfile v1.0.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
@@ -66,10 +67,10 @@ require (
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/crypto v0.53.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
-	golang.org/x/term v0.44.0 // indirect
-	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/crypto v0.54.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/term v0.45.0 // indirect
+	golang.org/x/text v0.40.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	rsc.io/qr v0.2.0 // indirect
 )
