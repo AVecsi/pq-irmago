@@ -1,7 +1,11 @@
 github.com/AVecsi/lazer v0.0.0-20260729101002-e8192d524694 h1:452n2DN1vumHW+2LUNeH22Ct+Ci2Hog+jFMmwp0eAW8=
 github.com/AVecsi/lazer v0.0.0-20260729101002-e8192d524694/go.mod h1:1OxsMlXbWhChvJaw73aeJZEX6p4RLlrb+StUzhO/54Y=
+github.com/AVecsi/lazer v0.0.0-20260729130749-c88d08fc64c4 h1:Ynfo/k6BrC7a4UsgJBHQoKyLZYx5ESwKuO5cs7XtOi0=
+github.com/AVecsi/lazer v0.0.0-20260729130749-c88d08fc64c4/go.mod h1:1OxsMlXbWhChvJaw73aeJZEX6p4RLlrb+StUzhO/54Y=
 github.com/AVecsi/pq-gabi v0.0.0-20260729101610-4ff2a01573ac h1:66iIy4Kgt+uTSyZI8CRpMflUF/VA52JQDFB4oNnV73Y=
 github.com/AVecsi/pq-gabi v0.0.0-20260729101610-4ff2a01573ac/go.mod h1:YummAsDDNADWrl9lRH7H9OwpC8JsuycT+fFgTP9rvJA=
+github.com/AVecsi/pq-gabi v0.0.0-20260729131158-f737a6a676e7 h1:FKHa8BZUSRJAdlAHChW/KsTDqHDIlK+kOYOy7rbWlYQ=
+github.com/AVecsi/pq-gabi v0.0.0-20260729131158-f737a6a676e7/go.mod h1:wufBTv+EsVOYM3FqOrPsJMI+mAgpNwlKylY4KolXPL0=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/alexandrevicenzi/go-sse v1.6.0 h1:3KvOzpuY7UrbqZgAtOEmub9/V5ykr7Myudw+PA+H1Ik=

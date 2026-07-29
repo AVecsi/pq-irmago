@@ -3,7 +3,7 @@ module github.com/AVecsi/pq-irmago
 go 1.25.0
 
 require (
-	github.com/AVecsi/pq-gabi v0.0.0-20260729101610-4ff2a01573ac
+	github.com/AVecsi/pq-gabi v0.0.0-20260729131158-f737a6a676e7
 	github.com/alexandrevicenzi/go-sse v1.6.0
 	github.com/alicebob/miniredis/v2 v2.33.0
 	github.com/bwesterb/go-atum v1.1.5
@@ -31,7 +31,7 @@ require (
 )
 
 require (
-	github.com/AVecsi/lazer v0.0.0-20260729101002-e8192d524694 // indirect
+	github.com/AVecsi/lazer v0.0.0-20260729130749-c88d08fc64c4 // indirect
 	github.com/alicebob/gopher-json v0.0.0-20200520072559-a9ecdc9d1d3a // indirect
 	github.com/bwesterb/byteswriter v1.0.0 // indirect
 	github.com/bwesterb/go-pow v1.0.0 // indirect

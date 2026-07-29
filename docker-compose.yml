@@ -121,6 +121,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.verify
+      args:
+        # Crypto backend: zkdilithium (default) or lazer. Set BACKEND=lazer to
+        # build the verification server with the lazer backend.
+        BACKEND: ${BACKEND:-zkdilithium}
     # Add a verify profile to prevent this service from starting by default.
     profiles:
       - verify
